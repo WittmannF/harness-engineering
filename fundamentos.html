@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Fundamentos de engenharia de harness: componentes, loop mínimo e responsabilidades.">
+  <title>Fundamentos — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css?v=2">
+  <script defer src="assets/site.js"></script>
+</head>
+<body data-page="fundamentos">
+  <div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero">
+      <div class="page-hero-inner">
+        <p class="eyebrow">Capítulo 01 · base conceitual</p>
+        <h1>Do modelo ao agente</h1>
+        <p class="lede">Entenda onde termina a inferência do modelo e onde começa a engenharia que torna a ação repetível, controlável e observável.</p>
+        <div class="page-meta"><span class="tag">12 min de leitura</span><span class="tag">4 diagramas</span><span class="tag">nível introdutório</span></div>
+      </div>
+    </header>
+
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página">
+        <strong>Nesta página</strong>
+        <ul>
+          <li><a href="#nao-e-agente">Uma chamada não é um agente</a></li>
+          <li><a href="#loop">Loop mínimo</a></li>
+          <li><a href="#componentes">Componentes</a></li>
+          <li><a href="#controle">O que o harness controla</a></li>
+          <li><a href="#workflow">Agente ou workflow?</a></li>
+          <li><a href="#revisao">Revisão</a></li>
+        </ul>
+      </aside>
+
+      <article class="article">
+        <p class="eyebrow">Ideia-chave</p>
+        <h2 id="nao-e-agente">Uma chamada ao modelo ainda não é um agente</h2>
+        <p>Uma inferência pode ser representada, de forma abstrata, como uma saída <em>y</em> amostrada a partir da distribuição do modelo condicionada ao contexto <em>c</em>. Isso descreve geração — não execução.</p>
+        <p class="formula">y ~ p<sub>θ</sub>( · | c )</p>
+        <p>Nada nessa expressão garante que um comando rode, um arquivo mude, um erro seja observado ou que o trabalho continue depois da primeira resposta. Para isso, precisamos de um processo externo que interprete a saída, aplique regras, execute ações e decida o próximo passo.</p>
+        <blockquote>O limite importante não é “chatbot versus agente” como rótulo. É saber se a saída do modelo participa de um loop controlado de interação com estado externo.</blockquote>
+
+        <h2 id="loop">O loop mínimo de um agente</h2>
+        <p>O handbook propõe quatro objetos que evoluem a cada passo. O harness seleciona contexto a partir do estado, chama o modelo, executa uma ação quando solicitada e incorpora a observação ao estado seguinte.</p>
+        <div class="formula">s<sub>t</sub> → c<sub>t</sub> = G(s<sub>t</sub>) → a<sub>t</sub> = M(c<sub>t</sub>) → o<sub>t</sub> = E(a<sub>t</sub>) → s<sub>t+1</sub> = U(s<sub>t</sub>, a<sub>t</sub>, o<sub>t</sub>)</div>
+
+        <figure class="diagram">
+          <svg viewBox="0 0 760 570" role="img" aria-labelledby="loop-title loop-desc">
+            <title id="loop-title">Loop mínimo de um agente</title>
+            <desc id="loop-desc">A tarefa vira contexto, o modelo gera uma resposta ou ação, o harness aplica política, executa no ambiente e usa a observação para montar o próximo contexto.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker>
+            </defs>
+            <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#arrow)">
+              <path d="M380 74V112"/><path d="M380 172V210"/><path d="M380 270V308"/><path d="M380 368V406"/><path d="M380 466V510H690V142H612"/>
+              <path d="M148 240H70V43H270"/>
+            </g>
+            <g font-family="system-ui, sans-serif" font-size="16" text-anchor="middle">
+              <rect x="270" y="20" width="220" height="54" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="53" fill="var(--ink)" font-weight="700">Tarefa</text>
+              <rect x="148" y="112" width="464" height="60" rx="12" fill="var(--surface-2)" stroke="var(--brand)"/><text x="380" y="148" fill="var(--ink)" font-weight="700">Montar contexto ativo</text>
+              <rect x="148" y="210" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="246" fill="var(--ink)" font-weight="700">Invocar o modelo</text>
+              <rect x="148" y="308" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="334" fill="var(--ink)" font-weight="700">Resposta final ou solicitação de ação?</text><text x="380" y="355" fill="var(--ink-soft)" font-size="13">se final, retornar · se ação, continuar</text>
+              <rect x="148" y="406" width="464" height="60" rx="12" fill="var(--surface-2)" stroke="var(--cyan)"/><text x="380" y="442" fill="var(--ink)" font-weight="700">Política · aprovação · roteamento</text>
+              <rect x="148" y="510" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="535" fill="var(--ink)" font-weight="700">Executar e observar</text><text x="380" y="557" fill="var(--ink-soft)" font-size="13">atualizar estado e continuar</text>
+              <text x="93" y="225" fill="var(--ink-soft)" font-size="13">saída final</text>
+            </g>
+          </svg>
+          <figcaption>O loop moderno herda a ideia essencial do ReAct: agir, observar, atualizar e continuar. Isso não exige expor raciocínio privado; exige preservar o encadeamento operacional.</figcaption>
+        </figure>
+
+        <h3>O papel de cada função</h3>
+        <div class="grid two">
+          <div class="card"><span class="kicker">G · seleção</span><h4>Contexto ativo</h4><p>Escolhe, do estado disponível, o que o modelo precisa ver agora.</p></div>
+          <div class="card"><span class="kicker">M · inferência</span><h4>Decisão do modelo</h4><p>Gera texto final ou uma solicitação estruturada de ação.</p></div>
+          <div class="card"><span class="kicker">E · execução</span><h4>Ambiente</h4><p>Aplica a ação no mundo e produz uma observação verificável.</p></div>
+          <div class="card"><span class="kicker">U · atualização</span><h4>Estado</h4><p>Registra resultado, progresso, falhas e dados necessários ao próximo passo.</p></div>
+        </div>
+
+        <h2 id="componentes">Cinco componentes que não são sinônimos</h2>
+        <p>Separar os objetos ajuda a localizar falhas. Um erro de modelo, um erro de roteamento e um erro de sandbox podem produzir o mesmo sintoma superficial — “a tarefa falhou” — mas exigem correções diferentes.</p>
+        <table class="compare-table">
+          <thead><tr><th>Componente</th><th>Função</th><th>Pergunta diagnóstica</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Modelo</strong></td><td>Sistema aprendido de inferência.</td><td>Ele interpretou e decidiu bem?</td></tr>
+            <tr><td><strong>Harness</strong></td><td>Controla o loop e liga inferência a ações.</td><td>O modelo recebeu e pôde fazer o necessário?</td></tr>
+            <tr><td><strong>Sessão</strong></td><td>Contêiner lógico de histórico e estado.</td><td>O que sobrevive entre turnos e reinícios?</td></tr>
+            <tr><td><strong>Ferramenta</strong></td><td>Capacidade chamável exposta ao modelo.</td><td>O contrato e o resultado são utilizáveis?</td></tr>
+            <tr><td><strong>Sandbox</strong></td><td>Ambiente controlado onde ações executam.</td><td>O que o código pode alcançar e alterar?</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout warning">
+          <strong>Controle e execução são planos diferentes</strong>
+          O harness decide o que deve acontecer; o sandbox limita onde e como a ação acontece. Eles podem compartilhar processo em um protótipo, mas não devem compartilhar pressupostos de confiança.
+        </div>
+
+        <h2 id="controle">O que o harness realmente controla</h2>
+        <p>Nem todo sistema implementa tudo no mesmo componente. Ainda assim, estas decisões precisam existir em algum lugar:</p>
+        <div class="grid three">
+          <div class="card"><h4>Antes da inferência</h4><ul><li>instruções e contexto</li><li>ferramentas visíveis</li><li>estado recuperado</li><li>orçamento restante</li></ul></div>
+          <div class="card"><h4>Durante a ação</h4><ul><li>validação de contrato</li><li>permissão e aprovação</li><li>roteamento</li><li>execução isolada</li></ul></div>
+          <div class="card"><h4>Depois da ação</h4><ul><li>representação do resultado</li><li>persistência e compactação</li><li>retry e recuperação</li><li>verificação e encerramento</li></ul></div>
+        </div>
+
+        <h2 id="workflow">Agente ou workflow?</h2>
+        <p>Num workflow, o caminho é majoritariamente determinado pelo código da aplicação. Num agente, o modelo escolhe dinamicamente estratégias e ações. Sistemas reais combinam os dois.</p>
+        <figure class="diagram">
+          <div class="flow">
+            <div class="flow-node"><span><strong>Workflow rígido</strong><br><small>ordem previsível, baixa autonomia</small></span></div>
+            <div class="flow-arrow">—</div>
+            <div class="flow-node control"><span><strong>Orquestração híbrida</strong><br><small>código define etapas, modelo decide dentro delas</small></span></div>
+            <div class="flow-arrow">—</div>
+            <div class="flow-node primary"><span><strong>Agente flexível</strong><br><small>modelo escolhe ações e sequência</small></span></div>
+          </div>
+          <figcaption>Quanto maior a autonomia, maior a necessidade de limites, observabilidade, critérios de sucesso e recuperação.</figcaption>
+        </figure>
+
+        <div class="quiz" id="revisao">
+          <h3>Cheque seu entendimento</h3>
+          <details><summary>Por que um system prompt não é o harness inteiro?</summary><p>Porque instruções são só uma entrada. O harness também pode controlar ferramentas, estado, aprovações, execução, erros, budgets, recuperação e verificação.</p></details>
+          <details><summary>O que transforma uma saída do modelo em ação?</summary><p>O processo externo que interpreta uma solicitação, valida política, chama a ferramenta no ambiente e retorna a observação ao loop.</p></details>
+          <details><summary>Por que separar sessão de contexto?</summary><p>Porque a sessão pode guardar mais histórico do que cabe ou interessa à próxima inferência, enquanto o contexto também pode conter dados efêmeros nunca persistidos.</p></details>
+        </div>
+
+        <nav class="pager" aria-label="Capítulos">
+          <a href="index.html"><small>Anterior</small>Visão geral</a>
+          <a href="ferramentas-contexto.html"><small>Próximo</small>Ferramentas e contexto</a>
+        </nav>
+      </article>
+    </div>
+  </main>
+  <div data-site-footer></div>
+</body>
+</html>

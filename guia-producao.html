@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Modelo mental completo, falhas comuns e checklist de produção para harnesses de agentes.">
+  <title>Guia de produção — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=2"><script defer src="assets/site.js"></script>
+</head>
+<body data-page="producao"><div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Capítulo 06 · síntese operacional</p><h1>Guia de produção</h1><p class="lede">Use este capítulo como mapa de revisão: arquitetura completa, taxonomia de falhas, equívocos comuns e perguntas antes de colocar um agente no mundo.</p><div class="page-meta"><span class="tag">20 min de leitura</span><span class="tag">checklist prático</span><span class="tag">nível produção</span></div></div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página"><strong>Nesta página</strong><ul><li><a href="#modelo">Modelo completo</a></li><li><a href="#falhas">Falhas comuns</a></li><li><a href="#equivocos">Equívocos</a></li><li><a href="#perguntas">15 perguntas</a></li><li><a href="#implementacao">Ordem de implementação</a></li><li><a href="#resumo">Resumo</a></li></ul></aside>
+      <article class="article">
+        <p class="eyebrow">Visão integrada</p><h2 id="modelo">O modelo mental completo</h2>
+        <p>A tarefa entra em um sistema com estado persistente. O harness seleciona contexto, dirige o modelo, controla ferramentas e interpreta observações. Limites duros cercam a execução; feedback e verificação fecham o loop.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 900 600" role="img" aria-labelledby="prod-title prod-desc">
+            <title id="prod-title">Arquitetura completa de um sistema de agente</title><desc id="prod-desc">A tarefa passa pelo harness e modelo até ferramentas e ambiente; estado durável, limites e feedback cercam o loop.</desc>
+            <defs><marker id="prod-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <g font-family="system-ui, sans-serif" fill="var(--ink)">
+              <rect x="25" y="25" width="850" height="550" rx="24" fill="var(--paper)" stroke="var(--danger)" stroke-width="2" stroke-dasharray="9 7"/>
+              <text x="50" y="58" fill="var(--danger)" font-size="14" font-weight="800">LIMITES DUROS · permissões · credenciais · filesystem · rede · schemas · budgets</text>
+              <rect x="70" y="90" width="760" height="75" rx="16" fill="var(--surface-2)" stroke="var(--line)"/><text x="450" y="122" text-anchor="middle" font-size="18" font-weight="800">SESSÃO / ESTADO DURÁVEL</text><text x="450" y="146" text-anchor="middle" fill="var(--ink-soft)" font-size="14">eventos · planos · artefatos · snapshots · histórico recuperável</text>
+              <rect x="210" y="200" width="480" height="190" rx="22" fill="var(--surface)" stroke="var(--brand)" stroke-width="3"/><text x="450" y="236" text-anchor="middle" fill="var(--brand)" font-size="20" font-weight="900">HARNESS</text>
+              <g font-size="14" text-anchor="middle"><rect x="238" y="260" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="304" y="288">seleção de contexto</text><rect x="384" y="260" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="450" y="288">loop do modelo</text><rect x="530" y="260" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="596" y="288">tool routing</text><rect x="238" y="320" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="304" y="348">policy / approval</text><rect x="384" y="320" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="450" y="348">retry / recovery</text><rect x="530" y="320" width="132" height="46" rx="10" fill="var(--paper)" stroke="var(--line)"/><text x="596" y="348">verificação</text></g>
+              <rect x="70" y="235" width="105" height="112" rx="16" fill="var(--surface)" stroke="var(--line)"/><text x="122" y="280" text-anchor="middle" font-size="17" font-weight="800">TAREFA</text><text x="122" y="306" text-anchor="middle" fill="var(--ink-soft)" font-size="13">objetivo</text><text x="122" y="326" text-anchor="middle" fill="var(--ink-soft)" font-size="13">restrições</text>
+              <rect x="725" y="235" width="105" height="112" rx="16" fill="var(--surface)" stroke="var(--cyan)" stroke-width="2"/><text x="777" y="280" text-anchor="middle" font-size="17" font-weight="800">MODELO</text><text x="777" y="306" text-anchor="middle" fill="var(--ink-soft)" font-size="13">capacidade</text><text x="777" y="326" text-anchor="middle" fill="var(--ink-soft)" font-size="13">aprendida</text>
+              <rect x="125" y="440" width="650" height="75" rx="16" fill="var(--surface-2)" stroke="var(--line)"/><text x="450" y="472" text-anchor="middle" font-size="18" font-weight="800">FERRAMENTAS · MCP · SANDBOXES · ARQUIVOS · APIs · BROWSER</text><text x="450" y="497" text-anchor="middle" fill="var(--ink-soft)" font-size="14">o plano de execução que produz efeitos e observações</text>
+              <text x="50" y="553" fill="var(--cyan)" font-size="14" font-weight="800">FEEDBACK · testes · UI · logs · métricas · traces · outcomes · graders</text>
+            </g>
+            <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#prod-arrow)"><path d="M175 290H210"/><path d="M690 290H725"/><path d="M450 390V440"/><path d="M205 477H90V390H210"/><path d="M450 165V200"/></g>
+          </svg>
+          <figcaption>Capacidade vem do modelo; confiabilidade emerge das conexões, restrições, estado e evidências ao redor dele.</figcaption>
+        </figure>
+
+        <h2 id="falhas">Taxonomia de falhas</h2>
+        <p>Classificar falhas muda a resposta. “O agente errou” é amplo demais para orientar engenharia.</p>
+        <div class="grid two">
+          <div class="card"><h3>Seleção de ferramenta</h3><p>A capacidade existe, mas o modelo escolhe a operação errada.</p></div><div class="card"><h3>Contrato</h3><p>A operação é correta, porém argumentos ou pré-condições são inválidos.</p></div>
+          <div class="card"><h3>Observação</h3><p>A ação funciona, mas o resultado é ruidoso, ambíguo ou incompleto.</p></div><div class="card"><h3>Contexto</h3><p>Informação importante falta, está obsoleta ou se perdeu na compactação.</p></div>
+          <div class="card"><h3>Estado</h3><p>Progresso, aprovações, planos ou ações anteriores se perdem.</p></div><div class="card"><h3>Ambiente</h3><p>Pacotes, arquivos, recursos ou permissões diferem do esperado.</p></div>
+          <div class="card"><h3>Verificação</h3><p>O modelo declara sucesso sem testar o estado externo.</p></div><div class="card"><h3>Autorização</h3><p>O agente é bloqueado demais ou recebe poder em excesso.</p></div>
+          <div class="card"><h3>Recuperação</h3><p>Retry duplica um efeito ou restart não reconcilia o mundo.</p></div><div class="card"><h3>Coordenação</h3><p>Subagentes duplicam, divergem ou disputam estado.</p></div>
+          <div class="card"><h3>Budget</h3><p>Turnos, tempo, custo ou concorrência acabam antes do sucesso.</p></div><div class="card"><h3>Proveniência</h3><p>Conteúdo não confiável ganha autoridade e redireciona o agente.</p></div>
+          <div class="card"><h3>Skill</h3><p>Uma skill relevante induz implementação incorreta ou regressão de eficiência.</p></div>
+        </div>
+
+        <h2 id="equivocos">Equívocos que parecem plausíveis</h2>
+        <table class="compare-table"><thead><tr><th>Equívoco</th><th>Correção</th></tr></thead><tbody>
+          <tr><td>“Harness é o system prompt.”</td><td>Instruções são uma parte; loop, tools, estado, recovery e verificação também contam.</td></tr>
+          <tr><td>“Harness é a sandbox.”</td><td>Harness controla o trabalho; sandbox é um ambiente onde ele executa.</td></tr>
+          <tr><td>“MCP é o agente.”</td><td>MCP padroniza capacidades; não define toda a orquestração.</td></tr>
+          <tr><td>“Janela de contexto é memória.”</td><td>Estado durável pode existir fora do contexto atual.</td></tr>
+          <tr><td>“Compactação preserva tudo.”</td><td>Resumo é representação com perdas.</td></tr>
+          <tr><td>“Mais tools sempre melhoram.”</td><td>Sobreposição aumenta ambiguidade e carga de seleção.</td></tr>
+          <tr><td>“Aprovação torna execução segura.”</td><td>Aprovação controla decisão; containment controla alcance.</td></tr>
+          <tr><td>“Se falhou, é só repetir.”</td><td>Efeitos não idempotentes podem duplicar consequências.</td></tr>
+          <tr><td>“O agente disse que terminou.”</td><td>Autodeclaração é mais fraca que evidência externa.</td></tr>
+          <tr><td>“Mais agentes são melhores.”</td><td>Coordenação pode dominar tarefas sequenciais.</td></tr>
+          <tr><td>“Modelo melhor mantém todo scaffolding útil.”</td><td>Hipóteses do harness expiram; faça ablações.</td></tr>
+          <tr><td>“Skills são prompts inofensivos.”</td><td>Podem incluir instruções, recursos e scripts; trate como código/configuração com proveniência.</td></tr>
+        </tbody></table>
+
+        <h2 id="perguntas">15 perguntas antes de produção</h2>
+        <ol class="steps">
+          <li><strong>O que o modelo recebe?</strong> Instruções, histórico, tools, resumos e artefatos.</li>
+          <li><strong>Quem controla o loop?</strong> Aplicação, harness gerenciado, workflow ou outro agente.</li>
+          <li><strong>Quais ações existem?</strong> Funções, MCP, shell, browser, APIs, arquivos e subagentes.</li>
+          <li><strong>Onde executam?</strong> Processo confiável, máquina local, container, VM ou serviço remoto.</li>
+          <li><strong>O que sobrevive?</strong> Eventos, arquivos, snapshots e efeitos após crash ou novo turno.</li>
+          <li><strong>Quais regras são mecânicas?</strong> Schemas, mounts, rede, aprovações, testes e budgets.</li>
+          <li><strong>Como erros aparecem?</strong> Exceção, retry, observação para o modelo ou escalonamento.</li>
+          <li><strong>O que pode ser repetido?</strong> Operações idempotentes, deduplicadas ou nenhuma das duas.</li>
+          <li><strong>Onde está o ground truth?</strong> Testes, logs, UI, banco, APIs e respostas externas.</li>
+          <li><strong>O que prova conclusão?</strong> Claim, validator, estado externo, evaluator ou pessoa.</li>
+          <li><strong>Como o loop para?</strong> Turnos, tempo, tokens, custo, policy e sucesso.</li>
+          <li><strong>Como retoma?</strong> Resume, retry, reprovision, rollback ou restart.</li>
+          <li><strong>Quais dados são não confiáveis?</strong> Web, arquivos, memória, tools, skills e subagentes.</li>
+          <li><strong>Como subagentes coordenam?</strong> Ownership, shared state, merge e limites.</li>
+          <li><strong>Como o harness é avaliado?</strong> Ablations, tarefas reais, ambiente estável e outcomes.</li>
+        </ol>
+
+        <h2 id="implementacao">Uma ordem pragmática de implementação</h2>
+        <figure class="diagram"><div class="flow vertical">
+          <div class="flow-node primary"><span><strong>1 · Defina sucesso observável</strong> — estado final e evidências</span></div><div class="flow-arrow">↓</div>
+          <div class="flow-node"><span><strong>2 · Modele ferramentas mínimas</strong> — operações distintas, schemas claros, erros úteis</span></div><div class="flow-arrow">↓</div>
+          <div class="flow-node control"><span><strong>3 · Restrinja execução</strong> — permissions, sandbox, credenciais e approvals</span></div><div class="flow-arrow">↓</div>
+          <div class="flow-node"><span><strong>4 · Persista estado e IDs</strong> — sessão, progresso, side effects e recovery</span></div><div class="flow-arrow">↓</div>
+          <div class="flow-node primary"><span><strong>5 · Feche o feedback loop</strong> — testes, logs, UI e estado externo</span></div><div class="flow-arrow">↓</div>
+          <div class="flow-node"><span><strong>6 · Avalie e faça ablações</strong> — qualidade, custo, falhas e necessidade de cada camada</span></div>
+        </div><figcaption>Começar pelo critério de sucesso evita construir muita autonomia sem saber como reconhecer conclusão.</figcaption></figure>
+
+        <h2 id="resumo">O resumo em nove frases</h2>
+        <ul class="checklist"><li>O modelo fornece capacidade aprendida.</li><li>O harness conecta essa capacidade ao trabalho.</li><li>A sessão determina o que pode sobreviver.</li><li>A política de contexto determina o que o modelo vê agora.</li><li>O ambiente determina o que realmente pode acontecer.</li><li>Permissões e containment determinam o alcance da falha.</li><li>Feedback mostra o que aconteceu.</li><li>Verificação transforma “done” em evidência.</li><li>Avaliação mostra se o harness ajuda ou só adiciona maquinaria.</li></ul>
+        <nav class="pager" aria-label="Capítulos"><a href="avaliacao.html"><small>Anterior</small>Verificação e avaliação</a><a href="referencias.html"><small>Próximo</small>Referências e fontes</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

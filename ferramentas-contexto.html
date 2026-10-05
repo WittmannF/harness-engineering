@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Como desenhar ferramentas, MCP e políticas de contexto para agentes de IA.">
+  <title>Ferramentas e contexto — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=2"><script defer src="assets/site.js"></script>
+</head>
+<body data-page="ferramentas">
+  <div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner">
+      <p class="eyebrow">Capítulo 02 · interfaces e informação</p><h1>Ferramentas e contexto</h1>
+      <p class="lede">A capacidade só ajuda quando é exposta de uma forma que o modelo consegue selecionar, usar, observar e corrigir.</p>
+      <div class="page-meta"><span class="tag">18 min de leitura</span><span class="tag">5 diagramas</span><span class="tag">design de interface</span></div>
+    </div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página"><strong>Nesta página</strong><ul>
+        <li><a href="#aci">Interface agente-computador</a></li><li><a href="#quatro">Quatro propriedades</a></li><li><a href="#custos">Custos da ferramenta</a></li><li><a href="#erros">Erros úteis</a></li><li><a href="#mcp">O limite do MCP</a></li><li><a href="#contexto">Contexto e estado</a></li><li><a href="#compactacao">Compactação</a></li><li><a href="#revisao">Revisão</a></li>
+      </ul></aside>
+      <article class="article">
+        <p class="eyebrow">Interface é arquitetura</p>
+        <h2 id="aci">O modelo nunca usa “o computador” em abstrato</h2>
+        <p>Ele usa a interface que o harness oferece. Um agente de código pode receber ferramentas como <code>read_file</code>, <code>search_code</code>, <code>apply_patch</code> e <code>run_tests</code>. Outro pode receber apenas <code>shell(command)</code>. As duas opções alcançam o mesmo repositório, mas impõem dificuldades bem diferentes.</p>
+        <p>O trabalho SWE-agent chamou essa camada de <strong>Agent-Computer Interface (ACI)</strong>: a interface do agente com o computador é uma variável experimental, não um detalhe neutro <a href="referencias.html#ref-2">[2]</a>.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node primary"><span><strong>Intenção</strong><br><small>“corrigir o bug”</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>ACI</strong><br><small>nomes, contratos e resultados</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Ações reais</strong><br><small>ler, editar, testar</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Evidência</strong><br><small>diff, testes e estado</small></span></div>
+        </div><figcaption>Uma boa ACI reduz tradução mental e torna o próximo passo correto mais evidente.</figcaption></figure>
+
+        <h2 id="quatro">Quatro propriedades de uma ferramenta</h2>
+        <div class="grid two">
+          <div class="card"><span class="kicker">01 · Affordance</span><h3>O que ela pode fazer?</h3><p>A capacidade real: ler, alterar, enviar, executar, buscar ou verificar.</p></div>
+          <div class="card"><span class="kicker">02 · Contrato</span><h3>Como pedir?</h3><p>Nome, descrição, argumentos, tipos, restrições e pré-condições.</p></div>
+          <div class="card"><span class="kicker">03 · Observação</span><h3>O que retorna?</h3><p>Dados, identificadores, erros, efeitos colaterais e informação truncada.</p></div>
+          <div class="card"><span class="kicker">04 · Feedback</span><h3>Ajuda a corrigir?</h3><p>O resultado torna a próxima decisão correta mais fácil ou obriga o modelo a adivinhar?</p></div>
+        </div>
+        <div class="callout"><strong>Disponível não significa utilizável</strong>Uma operação pode existir no backend e continuar praticamente inacessível ao agente se o nome for ambíguo, os parâmetros forem confusos ou o resultado ocultar o que aconteceu.</div>
+
+        <h2 id="custos">Ferramentas também consomem atenção</h2>
+        <p>Nome, descrição, argumentos e schema entram no contexto antes de qualquer chamada. Depois, o resultado volta ao modelo e compete por espaço com o restante da tarefa.</p>
+        <p class="formula">C<sub>ferramenta</sub> = C<sub>seleção</sub> + C<sub>observação</sub></p>
+        <table class="compare-table"><thead><tr><th>Problema</th><th>Sintoma</th><th>Melhoria típica</th></tr></thead><tbody>
+          <tr><td>Ferramentas sobrepostas</td><td><code>search</code>, <code>find</code>, <code>lookup</code> parecem equivalentes.</td><td>Menos operações, limites claros e namespacing.</td></tr>
+          <tr><td>Parâmetros ambíguos</td><td>O modelo escolhe o tool certo com argumentos inválidos.</td><td>Tipos restritos, exemplos curtos e validação acionável.</td></tr>
+          <tr><td>Resultado ruidoso</td><td>Centenas de campos escondem o dado necessário.</td><td>Filtros, paginação e modos conciso/detalhado.</td></tr>
+          <tr><td>Truncamento mudo</td><td>O agente assume que viu tudo.</td><td>Informar limite, total e como buscar a próxima parte.</td></tr>
+        </tbody></table>
+        <blockquote>Contar ferramentas não mede capacidade de forma monotônica. Uma ferramenta nova pode ampliar o que é alcançável e, ao mesmo tempo, piorar a seleção.</blockquote>
+
+        <h3>Um resultado de alto sinal</h3>
+        <p>Deve responder à decisão seguinte, preservar identificadores para ações futuras e explicitar lacunas. Um payload bonito para humanos pode ser caro e confuso para um modelo.</p>
+        <pre><code>{
+  "status": "encontrado",
+  "cliente_id": "cli_2481",
+  "nome": "Ana Souza",
+  "plano": "Pro",
+  "pendencias": 1,
+  "detalhes_disponiveis": true
+}</code></pre>
+
+        <h2 id="erros">Erros são observações, não apenas exceções</h2>
+        <p>“Error” não ensina o agente a se recuperar. Um erro útil distingue causa, efeitos colaterais e possibilidade de nova tentativa.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node risk"><span><strong>Falhou</strong><br><small>branch inexistente</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Classificar</strong><br><small>nenhum efeito colateral</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Explicar</strong><br><small>branches disponíveis</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Recuperar</strong><br><small>escolher branch válida</small></span></div>
+        </div><figcaption>Um erro recuperável precisa dar informação suficiente para outra ação — sem fingir que a anterior funcionou.</figcaption></figure>
+        <pre><code>{
+  "status": "failed",
+  "reason": "branch_not_found",
+  "requested_branch": "release/2.4",
+  "available_branches": ["main", "release/2.3"],
+  "side_effects": "none",
+  "retryable": true
+}</code></pre>
+
+        <h2 id="mcp">MCP é interoperabilidade, não a arquitetura inteira</h2>
+        <p>O Model Context Protocol padroniza como aplicações de IA descobrem e chamam capacidades externas. Isso é valioso, mas não define sozinho como o agente opera.</p>
+        <figure class="diagram">
+          <div class="layer-stack">
+            <div class="layer"><strong>Produto / tarefa</strong><small>objetivo e experiência do usuário</small></div>
+            <div class="layer"><strong>Harness do agente</strong><small>loop, contexto, política, recovery e verificação</small></div>
+            <div class="layer"><strong>Cliente MCP</strong><small>descoberta e chamadas interoperáveis</small></div>
+            <div class="layer"><strong>Servidores MCP</strong><small>tools · resources · prompts · extensões opcionais</small></div>
+          </div>
+          <figcaption>O MCP conecta capacidades. O harness ainda escolhe quando chamar, o que aprovar, como tratar efeitos e o que prova sucesso.</figcaption>
+        </figure>
+        <div class="grid two">
+          <div class="card"><h3>O MCP ajuda a definir</h3><ul><li>descoberta de ferramentas e recursos</li><li>formatos de requisição e resposta</li><li>negociação de capacidades</li><li>integração entre hosts e servidores</li></ul></div>
+          <div class="card"><h3>O harness ainda precisa definir</h3><ul><li>agendamento do loop</li><li>seleção de contexto</li><li>aprovação e retry</li><li>sandbox e coordenação</li><li>critério de conclusão e avaliação</li></ul></div>
+        </div>
+
+        <h2 id="contexto">Contexto ativo e estado durável são superfícies diferentes</h2>
+        <p>O modelo vê uma janela finita em cada chamada. O harness decide o que entra. Instruções, tarefa atual, ferramentas, histórico recente, documentação, resultados, planos, memória e relatórios de subagentes competem pelo mesmo recurso.</p>
+        <figure class="diagram">
+          <div class="flow">
+            <div class="flow-node"><span><strong>Estado durável</strong><br><small>eventos, arquivos, planos, commits, snapshots</small></span></div><div class="flow-arrow">→</div>
+            <div class="flow-node control"><span><strong>Política de contexto</strong><br><small>buscar · filtrar · resumir · ordenar</small></span></div><div class="flow-arrow">→</div>
+            <div class="flow-node primary"><span><strong>Contexto ativo</strong><br><small>somente o que esta inferência recebe</small></span></div>
+          </div><figcaption>Persistir não significa incluir sempre. Incluir uma vez também não significa persistir.</figcaption>
+        </figure>
+        <h3>Divulgação progressiva</h3>
+        <ol class="steps"><li><strong>Orientar:</strong> forneça o mínimo para o agente entender o sistema e a tarefa.</li><li><strong>Tornar descobrível:</strong> indique onde estão regras, documentos e dados aprofundados.</li><li><strong>Carregar sob demanda:</strong> traga detalhe somente quando a decisão atual precisar dele.</li></ol>
+        <p>Skills são um exemplo: pacotes de instruções e recursos carregados quando relevantes. Mas relevância tópica não garante benefício. Skills podem introduzir falhas funcionais, regressões de eficiência e risco de proveniência; devem ser testadas como qualquer componente do harness.</p>
+
+        <h2 id="compactacao">Compactação economiza contexto, mas perde informação</h2>
+        <p>Substituir uma trajetória longa por um resumo reduz custo, mas não preserva cada detalhe. Em geral, <span class="formula" style="display:inline-block;margin:.2rem;padding:.3rem .6rem;border-radius:6px;border-left:0">C(H) ≠ H</span>.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node"><span><strong>Histórico completo</strong><br><small>muitos eventos e detalhes</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node risk"><span><strong>Compactação</strong><br><small>transformação com perdas</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Resumo ativo</strong><br><small>barato, mas incompleto</small></span></div>
+        </div><figcaption>O desenho seguro mantém o histórico durável recuperável e trata o resumo como uma visão, não como substituto perfeito.</figcaption></figure>
+        <ul class="checklist"><li>Preserve decisões, IDs, restrições e compromissos explícitos.</li><li>Registre onde o detalhe omitido pode ser recuperado.</li><li>Separe fatos observados de inferências e planos.</li><li>Teste tarefas em que detalhes antigos voltam a ser relevantes.</li></ul>
+
+        <div class="quiz" id="revisao"><h3>Cheque seu entendimento</h3>
+          <details><summary>Por que um shell genérico pode ser pior que ferramentas especializadas?</summary><p>Porque transfere para o modelo a escolha de comandos, quoting, interpretação de saída e recuperação. A flexibilidade pode aumentar o custo de seleção e erro.</p></details>
+          <details><summary>MCP substitui o loop do agente?</summary><p>Não. Ele padroniza a interface de capacidades. Contexto, scheduling, aprovação, execução, verificação e avaliação continuam sendo políticas do harness.</p></details>
+          <details><summary>Por que compactação não deve apagar o histórico durável?</summary><p>Porque um resumo é uma transformação com perdas; detalhes hoje irrelevantes podem ser essenciais em uma etapa futura.</p></details>
+        </div>
+        <nav class="pager" aria-label="Capítulos"><a href="fundamentos.html"><small>Anterior</small>Fundamentos</a><a href="seguranca-controle.html"><small>Próximo</small>Segurança e controle</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

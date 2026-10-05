@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Verificação, feedback, observabilidade e avaliação de agentes e seus harnesses.">
+  <title>Verificação e avaliação — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=2"><script defer src="assets/site.js"></script>
+</head>
+<body data-page="avaliacao"><div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Capítulo 05 · evidência e medição</p><h1>Verificação e avaliação</h1><p class="lede">“Concluído” é uma afirmação. Um sistema confiável procura evidência externa, mede consistência e separa gerar de julgar.</p><div class="page-meta"><span class="tag">15 min de leitura</span><span class="tag">4 diagramas</span><span class="tag">evidence-driven</span></div></div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página"><strong>Nesta página</strong><ul><li><a href="#evidencia">Afirmação × evidência</a></li><li><a href="#enforcement">Mecanismo × julgamento</a></li><li><a href="#avaliador">Gerador e avaliador</a></li><li><a href="#feedback">Loops de feedback</a></li><li><a href="#observabilidade">Dois públicos</a></li><li><a href="#eval-harness">Evaluation harness</a></li><li><a href="#ambiente">Ambiente e score</a></li><li><a href="#ablacao">Ablar o harness</a></li></ul></aside>
+      <article class="article">
+        <p class="eyebrow">Ground truth</p><h2 id="evidencia">Auto-relato não prova conclusão</h2>
+        <p>“O bug foi corrigido” é uma saída linguística. Evidência mais forte seria reproduzir o bug original, executar regressões, exercitar o fluxo de ponta a ponta e inspecionar o estado afetado.</p>
+        <figure class="diagram"><div class="layer-stack">
+          <div class="layer"><strong>Nível 1 · afirmação do modelo</strong><small>“terminei”</small></div>
+          <div class="layer"><strong>Nível 2 · artefato presente</strong><small>arquivo ou resposta existe</small></div>
+          <div class="layer"><strong>Nível 3 · verificação determinística</strong><small>schema, testes, diff, invariantes</small></div>
+          <div class="layer"><strong>Nível 4 · estado externo correto</strong><small>UI, banco, API e outcome atendem ao objetivo</small></div>
+        </div><figcaption>Quanto mais perto do estado final real, mais forte a evidência. Nem toda tarefa permite o nível máximo, mas o harness deve buscar o melhor disponível.</figcaption></figure>
+        <div class="callout success"><strong>Regra prática</strong>Sempre que possível, vincule conclusão a estado observável fora da própria declaração do modelo.</div>
+
+        <h2 id="enforcement">Use mecanismo quando a regra é decidível</h2>
+        <p>Algumas decisões exigem interpretação; outras podem ser verificadas de forma confiável por código.</p>
+        <div class="grid two"><div class="card"><span class="kicker">Julgamento</span><h3>Modelo ou humano</h3><ul><li>resultado é relevante?</li><li>explicação satisfaz a intenção?</li><li>design está coerente?</li><li>qual arquivo investigar?</li></ul></div><div class="card"><span class="kicker">Enforcement</span><h3>Validador determinístico</h3><ul><li>JSON é válido?</li><li>path saiu do mount?</li><li>budget foi excedido?</li><li>dependência proibida apareceu?</li></ul></div></div>
+        <blockquote>O modelo não deveria carregar na memória uma regra que o sistema consegue impor de forma barata e objetiva.</blockquote>
+
+        <h2 id="avaliador">Gerar e avaliar são papéis diferentes</h2>
+        <p>Texto, pesquisa, planejamento e design não possuem um único teste determinístico. Nesses casos, separar geração e crítica pode revelar omissões e inconsistências.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node primary"><span><strong>Gerador</strong><br><small>produz solução</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Verificadores</strong><br><small>testes + grader + humano</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Feedback</strong><br><small>falhas concretas</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Revisão</strong><br><small>corrige e revalida</small></span></div>
+        </div><figcaption>Um avaliador baseado em modelo também é falível. Onde houver check determinístico, ele é geralmente mais forte.</figcaption></figure>
+
+        <h2 id="feedback">Feedback externo fecha o loop</h2>
+        <p>Uma ferramenta que altera estado, mas não permite observar o resultado, produz um loop fraco. A engenharia do harness precisa tornar ground truth consultável.</p>
+        <div class="grid three">
+          <div class="card"><h3>Código</h3><p>compilador, testes, lint, cobertura, diff e execução local.</p></div><div class="card"><h3>Produto</h3><p>screenshots, DOM, navegação, acessibilidade e estado visual.</p></div><div class="card"><h3>Operação</h3><p>logs, métricas, traces, banco, API e recursos provisionados.</p></div>
+        </div>
+        <ol class="steps"><li><strong>Agir:</strong> executar uma mudança bem delimitada.</li><li><strong>Observar:</strong> obter consequência e telemetria relevantes.</li><li><strong>Comparar:</strong> checar contra critério de sucesso.</li><li><strong>Revisar:</strong> corrigir a estratégia e repetir com limite.</li></ol>
+
+        <h2 id="observabilidade">Observabilidade tem dois públicos</h2>
+        <table class="compare-table"><thead><tr><th>Para operadores humanos</th><th>Para o próprio agente</th></tr></thead><tbody>
+          <tr><td>turnos e chamadas de ferramenta</td><td>logs da aplicação</td></tr><tr><td>latência, tokens e custo</td><td>traces e mensagens de erro</td></tr><tr><td>retries e eventos de aprovação</td><td>screenshots e estado do browser</td></tr><tr><td>falha e outcome final</td><td>resultado de testes e recursos</td></tr>
+        </tbody></table>
+        <p>O primeiro conjunto ajuda pessoas a depurar o harness. O segundo dá ao modelo evidência para depurar o sistema em que trabalha.</p>
+
+        <h2 id="eval-harness">Agent harness opera; evaluation harness mede</h2>
+        <p>Um evaluation harness provisiona ambientes estáveis, executa tarefas ponta a ponta, grava trials, chama graders e agrega resultados. A medição cobre mais que o modelo.</p>
+        <p class="formula">performance medida = F(modelo, harness, ambiente, tarefa, grader)</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node"><span><strong>Suite de tarefas</strong><br><small>casos representativos</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Sistema agente</strong><br><small>modelo + harness</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Ambiente estável</strong><br><small>recursos controlados</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Grader</strong><br><small>estado final + trajetória</small></span></div>
+        </div><figcaption>Mudar tool schemas, contexto, recursos ou grader pode mudar o score sem alterar os pesos do modelo.</figcaption></figure>
+        <h3>O que medir</h3>
+        <ul class="checklist"><li>Taxa de sucesso e sucesso consistente em tentativas repetidas.</li><li>Estado final correto, não apenas transcript plausível.</li><li>Falhas por categoria: seleção, contrato, contexto, ambiente, recovery.</li><li>Tokens, custo, latência, tool calls e intervenção humana.</li><li>Efeitos adversos: side effects duplicados, policy violations e regressões.</li></ul>
+
+        <h2 id="ambiente">Infraestrutura pode mudar o benchmark</h2>
+        <p>Benchmarks agentic de código dependem de instalação, compilação, CPU, memória, disco, rede e processos. Recursos insuficientes criam falhas de infraestrutura; recursos abundantes também podem habilitar estratégias novas. Comparar scores exige documentar condições.</p>
+        <div class="callout warning"><strong>Interprete diferenças pequenas com cautela</strong>Se recursos, timeout, tooling e ambiente não forem equivalentes, um placar pode estar medindo a infraestrutura tanto quanto o comportamento do agente.</div>
+
+        <h2 id="ablacao">Todo componente do harness é uma hipótese</h2>
+        <p>Scaffolding nasce para compensar limitações observadas. Quando o modelo muda, parte dele pode ficar desnecessária, cara ou até prejudicial. Avalie qualidade e custo por componente.</p>
+        <table class="compare-table"><thead><tr><th>Ablation</th><th>Pergunta</th><th>Sinal útil</th></tr></thead><tbody>
+          <tr><td>remover planner</td><td>planejamento ainda melhora o outcome?</td><td>qualidade × tokens × latência</td></tr><tr><td>remover evaluator</td><td>a crítica pega falhas reais ou só adiciona custo?</td><td>defeitos evitados por tarefa</td></tr><tr><td>reduzir ferramentas</td><td>seleção melhora sem perder alcance?</td><td>tool errors e sucesso</td></tr><tr><td>mudar compactação</td><td>mais retenção melhora continuidade?</td><td>falhas de contexto × custo</td></tr>
+        </tbody></table>
+        <blockquote>Uma melhoria de harness precisa justificar o ganho de qualidade e o custo de execução para o modelo e a distribuição de tarefas atuais.</blockquote>
+
+        <div class="quiz"><h3>Cheque seu entendimento</h3>
+          <details><summary>Por que um teste determinístico costuma ser mais forte que um grader de modelo?</summary><p>Porque propriedades decidíveis podem ser checadas de forma reproduzível, sem a variabilidade interpretativa de outro modelo.</p></details>
+          <details><summary>Uma avaliação mede só o modelo?</summary><p>Não. Mede a interação entre modelo, harness, ambiente, tarefa e grader.</p></details>
+          <details><summary>Por que reavaliar o harness quando o modelo muda?</summary><p>Porque workarounds antigos podem perder benefício, introduzir custo e criar novos pontos de falha.</p></details>
+        </div>
+        <nav class="pager" aria-label="Capítulos"><a href="operacao-duravel.html"><small>Anterior</small>Operação durável</a><a href="guia-producao.html"><small>Próximo</small>Guia de produção</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Estado, recuperação, idempotência, concorrência e subagentes em trabalhos de longa duração.">
+  <title>Operação durável — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=2"><script defer src="assets/site.js"></script>
+</head>
+<body data-page="operacao"><div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Capítulo 04 · estado e recuperação</p><h1>Operação durável</h1><p class="lede">Tarefas que atravessam minutos, horas ou reinícios herdam problemas conhecidos de sistemas distribuídos: consistência, replay, idempotência e coordenação.</p><div class="page-meta"><span class="tag">17 min de leitura</span><span class="tag">5 diagramas</span><span class="tag">sistemas distribuídos</span></div></div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página"><strong>Nesta página</strong><ul><li><a href="#estado">Estado estruturado</a></li><li><a href="#durabilidade">Longa duração</a></li><li><a href="#recuperacao">Controle × mundo</a></li><li><a href="#idempotencia">Idempotência</a></li><li><a href="#concorrencia">Concorrência</a></li><li><a href="#subagentes">Subagentes</a></li><li><a href="#legibilidade">Legibilidade</a></li><li><a href="#revisao">Revisão</a></li></ul></aside>
+      <article class="article">
+        <p class="eyebrow">Memória operacional</p><h2 id="estado">Estado de trabalho não precisa ser só conversa</h2>
+        <p>Trajetórias longas ficam mais robustas quando o progresso existe em artefatos explícitos: listas de tarefas, status de funcionalidades, notas, resultados de testes, commits, planos e manifests de saída.</p>
+        <div class="grid three"><div class="card"><h3>Inspecionável</h3><p>Humanos e sessões futuras conseguem entender o ponto atual.</p></div><div class="card"><h3>Versionável</h3><p>Mudanças de plano e estado podem ser comparadas e revertidas.</p></div><div class="card"><h3>Recuperável</h3><p>Um novo processo retoma sem depender da memória da instância anterior.</p></div></div>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node"><span><strong>Objetivo</strong><br><small>resultado desejado</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Plano persistido</strong><br><small>etapas + critérios</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Trabalho incremental</strong><br><small>commits + evidências</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Handoff</strong><br><small>estado claro para retomar</small></span></div>
+        </div><figcaption>Artefatos de progresso são memória externa: não estão “na cabeça” do modelo e podem sobreviver ao processo.</figcaption></figure>
+
+        <h2 id="durabilidade">Por que longa duração muda o problema</h2>
+        <p>Uma chamada de cinco segundos pode ser reexecutada com pouco contexto. Uma tarefa de horas convive com falhas de worker, desconexão, reclaim de sandbox, aprovação atrasada e mudança de processo.</p>
+        <figure class="diagram"><div class="flow vertical">
+          <div class="flow-node primary"><span><strong>Evento 1 · tarefa aceita</strong> — sessão durável registra objetivo e escopo</span></div>
+          <div class="flow-arrow">↓</div><div class="flow-node"><span><strong>Evento 2 · ação solicitada</strong> — tool call ganha um ID estável</span></div>
+          <div class="flow-arrow">↓</div><div class="flow-node risk"><span><strong>Interrupção</strong> — harness cai antes de receber a resposta</span></div>
+          <div class="flow-arrow">↓</div><div class="flow-node control"><span><strong>Recuperação</strong> — novo processo lê log, snapshot e mundo externo</span></div>
+          <div class="flow-arrow">↓</div><div class="flow-node primary"><span><strong>Reconciliação</strong> — retoma, deduplica ou pede intervenção</span></div>
+        </div><figcaption>Durabilidade exige estado fora do processo que pode falhar.</figcaption></figure>
+        <div class="callout"><strong>Log durável não torna efeitos externos atômicos</strong>Ele ajuda a lembrar o que foi pedido e observado, mas não garante que uma API externa não tenha realizado a ação antes da queda.</div>
+
+        <h2 id="recuperacao">Estado de controle e estado do mundo podem divergir</h2>
+        <p>Imagine <code>create_ticket(...)</code>. O sistema remoto cria o ticket; a conexão cai antes do retorno. O harness sabe que pediu, mas não sabe se confirmou. Repetir cegamente pode criar duplicata.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node"><span><strong>Solicitada</strong><br><small>intenção persistida</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Executada?</strong><br><small>mundo externo pode ter mudado</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node risk"><span><strong>Observação perdida</strong><br><small>timeout / crash</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Reconciliar</strong><br><small>consultar antes de repetir</small></span></div>
+        </div><figcaption>Essas transições não falham necessariamente juntas. Recovery é um problema de reconciliação, não apenas de replay.</figcaption></figure>
+
+        <h2 id="idempotencia">Retry deve ser específico da ferramenta</h2>
+        <p>Uma operação é idempotente quando repetir a mesma intenção produz o mesmo efeito desejado que executá-la uma vez.</p>
+        <p class="formula">f(f(s)) = f(s)</p>
+        <table class="compare-table"><thead><tr><th>Operação</th><th>Risco ao repetir</th><th>Proteção</th></tr></thead><tbody>
+          <tr><td><code>set_ticket_status(id, "closed")</code></td><td>Geralmente baixo se “fechado” já é o estado final.</td><td>Semântica idempotente.</td></tr>
+          <tr><td><code>create_order(...)</code></td><td>Pedido duplicado.</td><td>Chave de idempotência e unicidade.</td></tr>
+          <tr><td><code>send_email(...)</code></td><td>Mensagem enviada duas vezes.</td><td>ID de operação e deduplicação.</td></tr>
+          <tr><td><code>charge_card(...)</code></td><td>Cobrança duplicada.</td><td>Idempotency key + reconciliação no provedor.</td></tr>
+        </tbody></table>
+        <ol class="steps"><li><strong>Antes da ação:</strong> gere e persista um ID único de operação.</li><li><strong>Na ferramenta:</strong> aceite o ID e rejeite duplicatas ou retorne o resultado original.</li><li><strong>Após timeout:</strong> consulte o estado pelo ID antes de repetir.</li><li><strong>Se não houver certeza:</strong> escale; não converta ambiguidade em nova consequência.</li></ol>
+
+        <h2 id="concorrencia">Concorrência cria consistência compartilhada</h2>
+        <p>Vários workers ou subagentes podem ganhar throughput, mas levantam perguntas sobre ordem de commits, conflitos, ownership e autoridade do event stream.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node primary"><span><strong>Coordenador</strong><br><small>divide e atribui</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Agente A</strong><br><small>edita módulo X</small></span></div><div class="flow-arrow">↘</div>
+          <div class="flow-node risk"><span><strong>Estado comum</strong><br><small>conflito ou merge?</small></span></div><div class="flow-arrow">↗</div>
+          <div class="flow-node"><span><strong>Agente B</strong><br><small>edita módulo X</small></span></div>
+        </div><figcaption>Multiagente não é só prompting: é coordenação de escrita e consistência.</figcaption></figure>
+        <div class="grid two"><div class="card"><h3>Estratégias úteis</h3><ul><li>serializar escritas</li><li>particionar por recurso</li><li>ownership explícito</li><li>commits independentes</li><li>merge controlado</li></ul></div><div class="card"><h3>Sinais de risco</h3><ul><li>dois agentes na mesma área</li><li>requisitos mudando em paralelo</li><li>estado sem versão</li><li>efeitos externos sem IDs</li><li>resultado sem coordenador</li></ul></div></div>
+
+        <h2 id="subagentes">Subagentes são uma decisão do harness</h2>
+        <p>Delegar ajuda quando tarefas são realmente independentes e o resultado pode ser integrado com baixo custo. Em trabalho sequencial, a comunicação pode custar mais do que a execução.</p>
+        <table class="compare-table"><thead><tr><th>Delegue quando</th><th>Evite quando</th></tr></thead><tbody>
+          <tr><td>subtarefas têm limites e entregáveis claros</td><td>cada passo depende fortemente do anterior</td></tr>
+          <tr><td>fontes ou módulos são independentes</td><td>todos precisam do mesmo contexto extenso</td></tr>
+          <tr><td>o merge pode ser validado objetivamente</td><td>há escrita concorrente no mesmo estado</td></tr>
+          <tr><td>latência importa mais que custo total</td><td>o custo de coordenação domina</td></tr>
+        </tbody></table>
+        <blockquote>Delegação deve ser justificada pela decomposição da tarefa, não pela crença de que mais agentes são inerentemente melhores.</blockquote>
+
+        <h2 id="legibilidade">Legibilidade para agentes</h2>
+        <p>Ambientes “agent-legible” tornam informação importante descobrível pelos mecanismos que o agente consegue inspecionar. Isso substitui conhecimento tribal por artefatos.</p>
+        <ul class="checklist"><li>Documentação estruturada aponta para fontes de verdade.</li><li>Pacotes e ownership têm limites previsíveis.</li><li>Há comandos claros para build, teste e execução.</li><li>Logs, métricas e screenshots são consultáveis.</li><li>Regras mecânicas viram linters e testes estruturais.</li><li>O estado atual da aplicação pode ser reproduzido.</li></ul>
+        <div class="callout success"><strong>Mecanismo supera lembrança</strong>Se uma regra é decidível por máquina, codifique-a em schema, teste, lint ou boundary. O modelo não precisa “lembrar perfeitamente” algo que o sistema pode rejeitar automaticamente.</div>
+
+        <div class="quiz" id="revisao"><h3>Cheque seu entendimento</h3>
+          <details><summary>Um event log permite repetir qualquer tool call com segurança?</summary><p>Não. Ele preserva intenção e observações, mas o efeito externo pode já ter sido aplicado. Segurança de replay depende da semântica da operação.</p></details>
+          <details><summary>Quando um subagente melhora o sistema?</summary><p>Quando existe decomposição independente, integração barata e coordenação explícita. Em trajetórias sequenciais, pode piorar custo e qualidade.</p></details>
+          <details><summary>O que é legibilidade para agentes?</summary><p>Fazer pressupostos, estado, documentação, testes e telemetria descobríveis por interfaces que o agente pode usar.</p></details>
+        </div>
+        <nav class="pager" aria-label="Capítulos"><a href="seguranca-controle.html"><small>Anterior</small>Segurança e controle</a><a href="avaliacao.html"><small>Próximo</small>Verificação e avaliação</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

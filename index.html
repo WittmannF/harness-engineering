@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Um guia visual e didático, em português, para entender engenharia de harness em agentes de IA.">
+  <title>Engenharia de Harness — Guia visual em português</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css?v=2">
+  <script defer src="assets/site.js"></script>
+</head>
+<body data-page="inicio">
+  <div data-site-header></div>
+  <main id="conteudo">
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <p class="eyebrow">Guia visual · sistemas de agentes</p>
+          <h1>Engenharia de Harness</h1>
+          <p class="lede">O modelo é o motor. O harness é o sistema que escolhe o que ele vê, permite que ele aja, preserva estado, controla riscos e verifica se o trabalho realmente terminou.</p>
+          <div class="hero-actions">
+            <a class="button" href="fundamentos.html">Começar pelos fundamentos</a>
+            <a class="button secondary" href="guia-producao.html">Ir ao checklist de produção</a>
+          </div>
+        </div>
+        <figure class="hero-system" aria-label="Visão resumida de um sistema de agente">
+          <div class="system-stack">
+            <div class="system-node"><span class="node-index">01</span><span><strong>Tarefa</strong><small>objetivo, restrições e critérios</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node emphasis"><span class="node-index">02</span><span><strong>Harness</strong><small>contexto, loop, políticas e verificação</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node"><span class="node-index">03</span><span><strong>Modelo</strong><small>interpreta, escolhe e gera ações</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node"><span class="node-index">04</span><span><strong>Ambiente</strong><small>ferramentas, arquivos, APIs e sandbox</small></span></div>
+            <div class="system-arrow">↺ evidência volta ao loop</div>
+          </div>
+          <figcaption>O agente surge da interação controlada entre capacidade aprendida, orquestração e mundo externo.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter-grid" aria-labelledby="mapa">
+      <p class="eyebrow">Mapa de aprendizagem</p>
+      <h2 id="mapa">Do primeiro loop à operação em produção</h2>
+      <p class="lede">O conteúdo do handbook foi reorganizado em seis trilhas progressivas. Cada página combina conceitos, diagramas, exemplos e perguntas de revisão.</p>
+      <div class="chapter-cards">
+        <a class="chapter-card" href="fundamentos.html">
+          <span class="chapter-number">01 · BASE</span>
+          <h3>Fundamentos</h3>
+          <p>Modelo, agente, harness, sessão, ferramenta, sandbox e o loop mínimo que conecta tudo.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+        <a class="chapter-card" href="ferramentas-contexto.html">
+          <span class="chapter-number">02 · INTERFACES</span>
+          <h3>Ferramentas e contexto</h3>
+          <p>ACI, contratos, feedback, MCP, contexto ativo, estado durável e compactação.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+        <a class="chapter-card" href="seguranca-controle.html">
+          <span class="chapter-number">03 · LIMITES</span>
+          <h3>Segurança e controle</h3>
+          <p>Sandbox, permissões, aprovações, credenciais, proveniência e condições de parada.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+        <a class="chapter-card" href="operacao-duravel.html">
+          <span class="chapter-number">04 · DURABILIDADE</span>
+          <h3>Operação de longa duração</h3>
+          <p>Recuperação, idempotência, concorrência, subagentes e estado de trabalho estruturado.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+        <a class="chapter-card" href="avaliacao.html">
+          <span class="chapter-number">05 · EVIDÊNCIA</span>
+          <h3>Verificação e avaliação</h3>
+          <p>Feedback externo, observabilidade, graders, benchmarks e ablações do próprio harness.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+        <a class="chapter-card" href="guia-producao.html">
+          <span class="chapter-number">06 · SÍNTESE</span>
+          <h3>Guia de produção</h3>
+          <p>Modelo mental completo, falhas comuns e quinze perguntas para revisar um sistema real.</p>
+          <span class="card-link">Abrir capítulo</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="chapter-grid" style="padding-top:0" aria-labelledby="tese">
+      <div class="grid two">
+        <div>
+          <p class="eyebrow">A tese central</p>
+          <h2 id="tese">Um bom modelo não elimina engenharia de sistemas</h2>
+          <p>Uma chamada ao modelo só produz uma saída condicionada ao contexto. Ela não abre um navegador, aplica um patch, confirma uma transação nem sabe, sozinha, se uma tarefa acabou. O harness transforma inferência em trabalho controlado.</p>
+        </div>
+        <div class="card">
+          <p class="formula">sistema de agente ≈ modelo + harness + ambiente</p>
+          <p>Essa não é uma identidade formal. É um modelo mental para separar três fontes de comportamento: capacidade aprendida, lógica de controle e estado externo.</p>
+        </div>
+      </div>
+
+      <figure class="diagram" aria-labelledby="responsabilidades">
+        <div class="swimlanes">
+          <div class="swimlane"><div class="lane-label">MODELO</div><div class="lane-content"><span class="pill">compreender</span><span class="pill">planejar</span><span class="pill">selecionar ação</span><span class="pill">gerar resposta</span></div></div>
+          <div class="swimlane"><div class="lane-label">HARNESS</div><div class="lane-content"><span class="pill">montar contexto</span><span class="pill">expor ferramentas</span><span class="pill">aplicar política</span><span class="pill">persistir estado</span><span class="pill">recuperar</span><span class="pill">verificar</span></div></div>
+          <div class="swimlane"><div class="lane-label">AMBIENTE</div><div class="lane-content"><span class="pill">arquivos</span><span class="pill">shell</span><span class="pill">browser</span><span class="pill">APIs</span><span class="pill">banco de dados</span></div></div>
+        </div>
+        <figcaption id="responsabilidades">A separação é conceitual: implementações podem juntar componentes no mesmo processo, mas eles ainda falham e confiam em coisas diferentes.</figcaption>
+      </figure>
+    </section>
+  </main>
+  <div data-site-footer></div>
+</body>
+</html>

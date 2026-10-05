@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Segurança em harnesses: sandbox, contenção, aprovações, credenciais, proveniência e budgets.">
+  <title>Segurança e controle — Engenharia de Harness</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="assets/styles.css?v=2"><script defer src="assets/site.js"></script>
+</head>
+<body data-page="seguranca"><div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Capítulo 03 · limites e confiança</p><h1>Segurança e controle</h1><p class="lede">Permitir que um agente aja exige separar intenção, autoridade, alcance e evidência — porque nenhuma camada resolve tudo sozinha.</p><div class="page-meta"><span class="tag">15 min de leitura</span><span class="tag">4 diagramas</span><span class="tag">segurança por camadas</span></div></div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="Nesta página"><strong>Nesta página</strong><ul><li><a href="#ambiente">Ambiente de execução</a></li><li><a href="#sandbox">Sandbox ≠ orquestrador</a></li><li><a href="#camadas">Aprovação e contenção</a></li><li><a href="#credenciais">Credenciais</a></li><li><a href="#proveniencia">Proveniência</a></li><li><a href="#parada">Parada e budgets</a></li><li><a href="#revisao">Revisão</a></li></ul></aside>
+      <article class="article">
+        <p class="eyebrow">Princípio</p><h2 id="ambiente">Capacidade e risco nascem no ambiente</h2>
+        <p>Quando um agente pode editar arquivos, rodar código, navegar, chamar APIs ou criar artefatos persistentes, o ambiente de execução passa a fazer parte do desenho. Uma estratégia correta pode falhar porque falta um pacote. Uma estratégia perigosa pode “funcionar” enquanto ultrapassa um limite de segurança.</p>
+        <div class="grid three">
+          <div class="card"><h3>Capacidade</h3><p>filesystem, shell, pacotes, rede, navegador, portas e serviços.</p></div>
+          <div class="card"><h3>Persistência</h3><p>montagens, snapshots, bancos, arquivos e efeitos externos.</p></div>
+          <div class="card"><h3>Limites</h3><p>CPU, memória, tempo, egress, credenciais, caminhos e permissões.</p></div>
+        </div>
+
+        <h2 id="sandbox">Sandbox é limite de execução, não orquestração</h2>
+        <table class="compare-table"><thead><tr><th>Sandbox responde</th><th>Harness responde</th></tr></thead><tbody>
+          <tr><td>Quais arquivos são alcançáveis?</td><td>Quais arquivos o modelo precisa ver?</td></tr>
+          <tr><td>Quais comandos podem rodar?</td><td>Qual chamada de ferramenta deve executar?</td></tr>
+          <tr><td>A rede externa é permitida?</td><td>A ação exige aprovação?</td></tr>
+          <tr><td>Quais mounts e segredos existem?</td><td>Que resultado volta ao modelo?</td></tr>
+          <tr><td>Que estado sobrevive no ambiente?</td><td>O loop continua, para ou recupera?</td></tr>
+        </tbody></table>
+        <div class="callout"><strong>Separe o plano de controle do plano de execução</strong>Manter estado de sessão, logs, política e credenciais fora da execução não confiável reduz o que código gerado pode corromper ou exfiltrar.</div>
+
+        <h2 id="camadas">Aprovação e contenção resolvem problemas diferentes</h2>
+        <p>Aprovação humana preserva decisões sensíveis sob controle explícito. Contenção limita o que é tecnicamente alcançável mesmo se instruções, intenção ou revisão falharem.</p>
+        <figure class="diagram">
+          <div class="grid two">
+            <div class="card"><span class="kicker">Decisão</span><h3>Aprovação humana</h3><p>“Esta ação específica deve acontecer agora?”</p><ul><li>publicar mudança</li><li>enviar comunicação</li><li>apagar dados</li><li>elevar privilégio</li></ul></div>
+            <div class="card"><span class="kicker">Alcance</span><h3>Contenção ambiental</h3><p>“O que é possível alcançar se as outras defesas falharem?”</p><ul><li>limites de filesystem</li><li>regras de egress</li><li>VMs e containers</li><li>isolamento de credenciais</li></ul></div>
+          </div><figcaption>Prompts frequentes geram fadiga. A containment muda o espaço de estados alcançáveis sem depender de uma decisão perfeita a cada passo.</figcaption>
+        </figure>
+        <h3>Defesa em profundidade</h3>
+        <figure class="diagram"><div class="layer-stack">
+          <div class="layer"><strong>1 · Contrato</strong><small>schema, validação e argumentos restritos</small></div>
+          <div class="layer"><strong>2 · Política</strong><small>permissões, allowlists e classificação de risco</small></div>
+          <div class="layer"><strong>3 · Aprovação</strong><small>decisões de alto impacto sob controle humano</small></div>
+          <div class="layer"><strong>4 · Contenção</strong><small>limites duros de arquivo, rede, processo e segredo</small></div>
+        </div><figcaption>Nenhuma camada é perfeita; camadas independentes reduzem o raio de dano.</figcaption></figure>
+
+        <h2 id="credenciais">Segredos fora da execução não confiável</h2>
+        <p>Se código gerado roda no mesmo ambiente que contém credenciais de longa duração, prompt injection, dependências maliciosas ou comandos incorretos podem ler esses segredos.</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node primary"><span><strong>Sandbox</strong><br><small>sem segredo bruto</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Proxy controlado</strong><br><small>escopo · policy · auditoria</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Serviço externo</strong><br><small>credencial aplicada fora</small></span></div>
+        </div><figcaption>Um recurso que nunca entra no sandbox não pode ser lido diretamente por ele. Isso é estruturalmente mais forte do que “não revele o segredo”.</figcaption></figure>
+        <ul class="checklist"><li>Prefira tokens curtos, escopados e específicos por recurso.</li><li>Use proxies ou brokers que façam a operação autorizada sem expor a chave.</li><li>Registre o uso sem registrar o segredo.</li><li>Revogue e rotacione de forma independente do sandbox.</li></ul>
+
+        <h2 id="proveniencia">Observações têm origem, confiança e autoridade</h2>
+        <p>Texto vindo da web, e-mail, issue, arquivo, memória, skill, ferramenta ou subagente pode conter instruções hostis. Virar token não torna uma fonte confiável.</p>
+        <p class="formula">o<sub>i</sub> = (conteúdo, fonte, confiança, tempo, permissões)</p>
+        <figure class="diagram"><div class="flow">
+          <div class="flow-node risk"><span><strong>Conteúdo externo</strong><br><small>dados + possíveis instruções</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node"><span><strong>Classificar origem</strong><br><small>quem produziu e quando?</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node control"><span><strong>Aplicar autoridade</strong><br><small>dados não sobrescrevem política</small></span></div><div class="flow-arrow">→</div>
+          <div class="flow-node primary"><span><strong>Usar com limites</strong><br><small>escopo mínimo e verificação</small></span></div>
+        </div><figcaption>Persistência amplia o risco: conteúdo comprometido pode atravessar turnos por memória, resumos e artefatos.</figcaption></figure>
+        <div class="callout warning"><strong>Regra operacional</strong>Dados não confiáveis podem informar uma decisão, mas não devem adquirir autoridade só porque foram recuperados ou resumidos pelo harness.</div>
+
+        <h2 id="parada">Condições de parada e budgets limitam autonomia</h2>
+        <p>Um loop autônomo precisa terminar por razões diferentes: sucesso verificado, resposta final, política, pedido humano, erro fatal ou esgotamento de recurso. “Parou” não é sinônimo de “concluiu”.</p>
+        <p class="formula">B = (B<sub>turnos</sub>, B<sub>tokens</sub>, B<sub>tempo</sub>, B<sub>custo</sub>, B<sub>tools</sub>, B<sub>concorrência</sub>)</p>
+        <table class="compare-table"><thead><tr><th>Estado terminal</th><th>Significado</th><th>Ação típica</th></tr></thead><tbody>
+          <tr><td><strong>Sucesso verificado</strong></td><td>O estado externo atende ao critério.</td><td>Entregar com evidência.</td></tr>
+          <tr><td><strong>Bloqueio de política</strong></td><td>A ação não é autorizada.</td><td>Pedir decisão ou oferecer alternativa.</td></tr>
+          <tr><td><strong>Budget esgotado</strong></td><td>O limite operacional foi atingido.</td><td>Salvar estado e explicar incompletude.</td></tr>
+          <tr><td><strong>Falha irrecuperável</strong></td><td>Não há próxima ação segura.</td><td>Encerrar, preservar diagnóstico.</td></tr>
+          <tr><td><strong>Handoff humano</strong></td><td>Interpretação ou autoridade externa é necessária.</td><td>Apresentar contexto e decisão pendente.</td></tr>
+        </tbody></table>
+        <div class="quiz" id="revisao"><h3>Cheque seu entendimento</h3>
+          <details><summary>Por que aprovação humana não substitui sandbox?</summary><p>Porque aprovação decide se uma ação deveria ocorrer; a sandbox limita o que pode ocorrer mesmo se uma decisão errada for aprovada.</p></details>
+          <details><summary>Qual a defesa mais forte para uma credencial?</summary><p>Evitar que ela entre no ambiente não confiável. Instruções de uso são mais fracas que limites de alcance.</p></details>
+          <details><summary>Se o agente atingiu o máximo de turnos, a tarefa terminou?</summary><p>O loop terminou, mas a tarefa pode estar incompleta. O estado terminal deve distinguir budget de sucesso.</p></details>
+        </div>
+        <nav class="pager" aria-label="Capítulos"><a href="ferramentas-contexto.html"><small>Anterior</small>Ferramentas e contexto</a><a href="operacao-duravel.html"><small>Próximo</small>Operação durável</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

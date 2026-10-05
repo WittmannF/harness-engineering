@@ -1,6 +1,6 @@
 # Engenharia de Harness
 
-Guia visual e didático em português sobre engenharia de harness para agentes de IA, baseado no handbook **Understanding Harness Engineering**, de @techNmak.
+Guia visual e didático, em português e inglês, sobre engenharia de harness para agentes de IA, baseado no handbook **Understanding Harness Engineering**, de @techNmak.
 
 O site é estático e multipágina. Abra `index.html` localmente ou sirva a pasta com:
 
@@ -18,3 +18,5 @@ O workflow em `.github/workflows/pages.yml` publica automaticamente a branch `ma
 - Estado durável, recuperação e trabalho longo
 - Verificação, observabilidade e avaliação
 - Checklist de produção e referências
+
+A versão em inglês está disponível em `en/` e cada página possui um seletor de idioma que preserva o capítulo atual.

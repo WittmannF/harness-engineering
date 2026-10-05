@@ -136,6 +136,22 @@ code, pre, .formula {
   color: var(--ink);
   cursor: pointer;
 }
+.language-link {
+  flex: 0 0 auto;
+  min-width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--brand);
+  font-size: .78rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+.language-link:hover { background: var(--surface-2); color: var(--brand-strong); }
 .menu-button { display: none; }
 
 .hero {
@@ -459,6 +475,10 @@ details p { margin: 0 0 1rem; color: var(--ink-soft); }
   .swimlane { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; }
   .pager a:last-child { text-align: left; }
+}
+
+@media (max-width: 560px) {
+  .brand-text { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Verification, feedback, observability, and evaluation of agents and their harnesses."><title>Verification and evaluation — Harness Engineering</title><link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/styles.css?v=3"><link rel="alternate" hreflang="pt-BR" href="../avaliacao.html"><link rel="alternate" hreflang="en" href="evaluation.html"><script defer src="../assets/site.js?v=3"></script></head>
+<body data-page="avaliacao"><div data-site-header></div><main id="conteudo">
+  <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Chapter 05 · evidence and measurement</p><h1>Verification and evaluation</h1><p class="lede">“Done” is a claim. A reliable system looks for external evidence, measures consistency, and separates producing from judging.</p><div class="page-meta"><span class="tag">15 min read</span><span class="tag">4 diagrams</span><span class="tag">evidence-driven</span></div></div></header>
+  <div class="page-shell">
+    <aside class="toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#evidence">Claim × evidence</a></li><li><a href="#enforcement">Mechanism × judgment</a></li><li><a href="#evaluator">Generator and evaluator</a></li><li><a href="#feedback">Feedback loops</a></li><li><a href="#observability">Two audiences</a></li><li><a href="#eval-harness">Evaluation harness</a></li><li><a href="#environment">Environment and score</a></li><li><a href="#ablation">Ablate the harness</a></li></ul></aside>
+    <article class="article">
+      <p class="eyebrow">Ground truth</p><h2 id="evidence">Self-reported completion is not proof</h2>
+      <p>“The bug is fixed” is a language output. Stronger evidence would reproduce the original failure, run regressions, exercise the flow end to end, and inspect the affected state.</p>
+      <figure class="diagram"><div class="layer-stack"><div class="layer"><strong>Level 1 · model claim</strong><small>“I am done”</small></div><div class="layer"><strong>Level 2 · artifact exists</strong><small>a file or response is present</small></div><div class="layer"><strong>Level 3 · deterministic verification</strong><small>schema, tests, diff, invariants</small></div><div class="layer"><strong>Level 4 · correct external state</strong><small>UI, database, API, and outcome satisfy the goal</small></div></div><figcaption>The closer evidence is to the real final state, the stronger it is. Not every task permits the highest level, but the harness should seek the best available signal.</figcaption></figure>
+      <div class="callout success"><strong>Practical rule</strong>Whenever possible, tie completion to observable state outside the model’s own assertion.</div>
+
+      <h2 id="enforcement">Use mechanisms for mechanically decidable rules</h2>
+      <p>Some decisions genuinely require interpretation; others can be checked reliably by code.</p>
+      <div class="grid two"><div class="card"><span class="kicker">Judgment</span><h3>Model or human</h3><ul><li>Is this result relevant?</li><li>Does the explanation satisfy the intent?</li><li>Is the design coherent?</li><li>Which file should be investigated?</li></ul></div><div class="card"><span class="kicker">Enforcement</span><h3>Deterministic validator</h3><ul><li>Is the JSON valid?</li><li>Did the path escape the mount?</li><li>Was the budget exceeded?</li><li>Did a forbidden dependency appear?</li></ul></div></div>
+      <blockquote>The model should not have to remember a rule that the system can enforce cheaply and objectively.</blockquote>
+
+      <h2 id="evaluator">Generating and evaluating are different roles</h2>
+      <p>Prose, research, planning, and design do not have a single deterministic test. Separating generation from critique can expose omissions and inconsistencies.</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node primary"><span><strong>Generator</strong><br><small>produces a solution</small></span></div><div class="flow-arrow">→</div><div class="flow-node control"><span><strong>Verifiers</strong><br><small>tests + grader + human</small></span></div><div class="flow-arrow">→</div><div class="flow-node"><span><strong>Feedback</strong><br><small>concrete failures</small></span></div><div class="flow-arrow">→</div><div class="flow-node primary"><span><strong>Revision</strong><br><small>correct and revalidate</small></span></div></div><figcaption>A model-based evaluator is fallible too. When a deterministic check exists, it is generally stronger.</figcaption></figure>
+
+      <h2 id="feedback">External feedback closes the loop</h2>
+      <p>A tool that changes state but cannot expose the result creates a weak feedback loop. Harness engineering must make ground truth queryable.</p>
+      <div class="grid three"><div class="card"><h3>Code</h3><p>Compiler, tests, lint, coverage, diff, and local execution.</p></div><div class="card"><h3>Product</h3><p>Screenshots, DOM, navigation, accessibility, and visual state.</p></div><div class="card"><h3>Operations</h3><p>Logs, metrics, traces, database, APIs, and provisioned resources.</p></div></div>
+      <ol class="steps"><li><strong>Act:</strong> make a bounded change.</li><li><strong>Observe:</strong> obtain the relevant consequence and telemetry.</li><li><strong>Compare:</strong> check against the success criterion.</li><li><strong>Revise:</strong> correct the strategy and repeat within limits.</li></ol>
+
+      <h2 id="observability">Observability has two audiences</h2>
+      <table class="compare-table"><thead><tr><th>For human operators</th><th>For the agent itself</th></tr></thead><tbody><tr><td>turns and tool calls</td><td>application logs</td></tr><tr><td>latency, tokens, and cost</td><td>traces and error messages</td></tr><tr><td>retries and approval events</td><td>screenshots and browser state</td></tr><tr><td>failure and final outcome</td><td>test results and resource state</td></tr></tbody></table>
+      <p>The first set helps people debug the harness. The second gives the model evidence to debug the system it is working on.</p>
+
+      <h2 id="eval-harness">An agent harness operates; an evaluation harness measures</h2>
+      <p>An evaluation harness provisions stable environments, runs tasks end to end, records trials, invokes graders, and aggregates results. It measures more than the model.</p>
+      <p class="formula">measured performance = F(model, harness, environment, task, grader)</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node"><span><strong>Task suite</strong><br><small>representative cases</small></span></div><div class="flow-arrow">→</div><div class="flow-node primary"><span><strong>Agent system</strong><br><small>model + harness</small></span></div><div class="flow-arrow">→</div><div class="flow-node control"><span><strong>Stable environment</strong><br><small>controlled resources</small></span></div><div class="flow-arrow">→</div><div class="flow-node"><span><strong>Grader</strong><br><small>final state + trajectory</small></span></div></div><figcaption>Changing tool schemas, context, resources, or the grader can change the score without changing model weights.</figcaption></figure>
+      <h3>What to measure</h3><ul class="checklist"><li>Success rate and consistency across repeated trials.</li><li>Correct final state, not merely a plausible transcript.</li><li>Failure categories: selection, contract, context, environment, recovery.</li><li>Tokens, cost, latency, tool calls, and human intervention.</li><li>Adverse effects: duplicate side effects, policy violations, and regressions.</li></ul>
+
+      <h2 id="environment">Infrastructure can change benchmark scores</h2>
+      <p>Agentic coding benchmarks depend on installation, compilation, CPU, memory, disk, network, and processes. Too few resources create infrastructure failures; abundant resources may enable different strategies. Meaningful score comparison requires documented conditions.</p>
+      <div class="callout warning"><strong>Treat small differences cautiously</strong>If resources, timeout, tooling, and environment are not equivalent, a leaderboard may be measuring infrastructure as much as agent behavior.</div>
+
+      <h2 id="ablation">Every harness component is a hypothesis</h2>
+      <p>Scaffolding is created to compensate for observed limitations. When the model changes, some of it can become unnecessary, expensive, or harmful. Measure quality and cost component by component.</p>
+      <table class="compare-table"><thead><tr><th>Ablation</th><th>Question</th><th>Useful signal</th></tr></thead><tbody><tr><td>remove planner</td><td>Does planning still improve outcomes?</td><td>quality × tokens × latency</td></tr><tr><td>remove evaluator</td><td>Does critique find real defects or only add cost?</td><td>defects prevented per task</td></tr><tr><td>reduce tools</td><td>Does selection improve without losing reach?</td><td>tool errors and success</td></tr><tr><td>change compaction</td><td>Does more retention improve continuity?</td><td>context failures × cost</td></tr></tbody></table>
+      <blockquote>A harness improvement should justify both its quality lift and execution cost for the current model and task distribution.</blockquote>
+
+      <div class="quiz"><h3>Check your understanding</h3><details><summary>Why is a deterministic test often stronger than a model grader?</summary><p>Decidable properties can be checked reproducibly, without another model’s interpretive variability.</p></details><details><summary>Does an evaluation measure only the model?</summary><p>No. It measures the interaction among model, harness, environment, task, and grader.</p></details><details><summary>Why reevaluate the harness when the model changes?</summary><p>Old workarounds may lose their benefit, retain their cost, and create new failure modes.</p></details></div>
+      <nav class="pager" aria-label="Chapters"><a href="durable-operations.html"><small>Previous</small>Durable operations</a><a href="production-guide.html"><small>Next</small>Production guide</a></nav>
+    </article>
+  </div>
+</main><div data-site-footer></div></body></html>

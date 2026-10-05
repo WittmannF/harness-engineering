@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Harness engineering fundamentals: components, the minimal agent loop, and control responsibilities.">
+  <title>Fundamentals — Harness Engineering</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/styles.css?v=3"><link rel="alternate" hreflang="pt-BR" href="../fundamentos.html"><link rel="alternate" hreflang="en" href="fundamentals.html"><script defer src="../assets/site.js?v=3"></script>
+</head>
+<body data-page="fundamentos"><div data-site-header></div>
+  <main id="conteudo">
+    <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Chapter 01 · conceptual foundation</p><h1>From model to agent</h1><p class="lede">Learn where model inference ends and the engineering that makes action repeatable, controlled, and observable begins.</p><div class="page-meta"><span class="tag">12 min read</span><span class="tag">4 diagrams</span><span class="tag">introductory</span></div></div></header>
+    <div class="page-shell">
+      <aside class="toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#not-an-agent">A call is not an agent</a></li><li><a href="#loop">Minimal loop</a></li><li><a href="#components">Components</a></li><li><a href="#control">What the harness controls</a></li><li><a href="#workflow">Agent or workflow?</a></li><li><a href="#review">Review</a></li></ul></aside>
+      <article class="article">
+        <p class="eyebrow">Key idea</p><h2 id="not-an-agent">A model call is not yet an agent</h2>
+        <p>An inference can be represented abstractly as an output <em>y</em> sampled from the model distribution conditioned on context <em>c</em>. That describes generation—not execution.</p>
+        <p class="formula">y ~ p<sub>θ</sub>( · | c )</p>
+        <p>Nothing in this expression guarantees that a command runs, a file changes, an error is observed, or work continues after the first response. That requires an external process that interprets the output, applies rules, executes actions, and decides what happens next.</p>
+        <blockquote>The important boundary is not “chatbot versus agent” as a marketing label. It is whether model output participates in a controlled interaction loop with external state.</blockquote>
+
+        <h2 id="loop">The minimal agent loop</h2>
+        <p>The handbook proposes four evolving objects. The harness selects context from state, calls the model, executes an action when requested, and incorporates the resulting observation into the next state.</p>
+        <div class="formula">s<sub>t</sub> → c<sub>t</sub> = G(s<sub>t</sub>) → a<sub>t</sub> = M(c<sub>t</sub>) → o<sub>t</sub> = E(a<sub>t</sub>) → s<sub>t+1</sub> = U(s<sub>t</sub>, a<sub>t</sub>, o<sub>t</sub>)</div>
+        <figure class="diagram">
+          <svg viewBox="0 0 760 570" role="img" aria-labelledby="loop-title-en loop-desc-en">
+            <title id="loop-title-en">The minimal agent loop</title><desc id="loop-desc-en">A task becomes context, the model produces a final response or action, the harness applies policy, executes in the environment, and uses the observation to assemble the next context.</desc>
+            <defs><marker id="arrow-en" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+            <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#arrow-en)"><path d="M380 74V112"/><path d="M380 172V210"/><path d="M380 270V308"/><path d="M380 368V406"/><path d="M380 466V510H690V142H612"/><path d="M148 240H70V43H270"/></g>
+            <g font-family="system-ui, sans-serif" font-size="16" text-anchor="middle">
+              <rect x="270" y="20" width="220" height="54" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="53" fill="var(--ink)" font-weight="700">Task</text>
+              <rect x="148" y="112" width="464" height="60" rx="12" fill="var(--surface-2)" stroke="var(--brand)"/><text x="380" y="148" fill="var(--ink)" font-weight="700">Assemble active context</text>
+              <rect x="148" y="210" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="246" fill="var(--ink)" font-weight="700">Invoke the model</text>
+              <rect x="148" y="308" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="334" fill="var(--ink)" font-weight="700">Final response or action request?</text><text x="380" y="355" fill="var(--ink-soft)" font-size="13">if final, return · if action, continue</text>
+              <rect x="148" y="406" width="464" height="60" rx="12" fill="var(--surface-2)" stroke="var(--cyan)"/><text x="380" y="442" fill="var(--ink)" font-weight="700">Policy · approval · routing</text>
+              <rect x="148" y="510" width="464" height="60" rx="12" fill="var(--paper)" stroke="var(--line)"/><text x="380" y="535" fill="var(--ink)" font-weight="700">Execute and observe</text><text x="380" y="557" fill="var(--ink-soft)" font-size="13">update state and continue</text><text x="93" y="225" fill="var(--ink-soft)" font-size="13">final output</text>
+            </g>
+          </svg>
+          <figcaption>The modern loop inherits ReAct’s core systems idea: act, observe, update, and continue. This does not require exposing private reasoning; it requires preserving the operational chain.</figcaption>
+        </figure>
+
+        <h3>What each function does</h3>
+        <div class="grid two"><div class="card"><span class="kicker">G · selection</span><h4>Active context</h4><p>Chooses, from available state, what the model needs to see now.</p></div><div class="card"><span class="kicker">M · inference</span><h4>Model decision</h4><p>Produces final text or a structured action request.</p></div><div class="card"><span class="kicker">E · execution</span><h4>Environment</h4><p>Applies the action to the world and produces a verifiable observation.</p></div><div class="card"><span class="kicker">U · update</span><h4>State</h4><p>Records results, progress, failures, and what the next step will need.</p></div></div>
+
+        <h2 id="components">Five components that are not synonyms</h2>
+        <p>Separating the objects helps localize failures. A model error, routing error, and sandbox error can all produce the same superficial symptom—“the task failed”—but require different fixes.</p>
+        <table class="compare-table"><thead><tr><th>Component</th><th>Function</th><th>Diagnostic question</th></tr></thead><tbody><tr><td><strong>Model</strong></td><td>The learned inference system.</td><td>Did it interpret and decide well?</td></tr><tr><td><strong>Harness</strong></td><td>Drives the loop and connects inference to actions.</td><td>Did the model receive and have access to what it needed?</td></tr><tr><td><strong>Session</strong></td><td>A logical container for history and state.</td><td>What survives turns and restarts?</td></tr><tr><td><strong>Tool</strong></td><td>A callable capability exposed to the model.</td><td>Are the contract and result usable?</td></tr><tr><td><strong>Sandbox</strong></td><td>A controlled execution environment.</td><td>What can code reach and modify?</td></tr></tbody></table>
+        <div class="callout warning"><strong>Control and execution are different planes</strong>The harness decides what should happen; the sandbox constrains where and how it happens. They can share a process in a prototype, but they should not share trust assumptions.</div>
+
+        <h2 id="control">What the harness actually controls</h2>
+        <p>Not every system implements all of this in one component. Yet these decisions must exist somewhere:</p>
+        <div class="grid three"><div class="card"><h4>Before inference</h4><ul><li>instructions and context</li><li>visible tools</li><li>retrieved state</li><li>remaining budget</li></ul></div><div class="card"><h4>During action</h4><ul><li>contract validation</li><li>permission and approval</li><li>routing</li><li>isolated execution</li></ul></div><div class="card"><h4>After action</h4><ul><li>result representation</li><li>persistence and compaction</li><li>retry and recovery</li><li>verification and stopping</li></ul></div></div>
+
+        <h2 id="workflow">Agent or workflow?</h2>
+        <p>In a workflow, the execution path is largely determined by application code. In an agent, the model dynamically chooses strategies and actions. Real systems often combine both.</p>
+        <figure class="diagram"><div class="flow"><div class="flow-node"><span><strong>Rigid workflow</strong><br><small>predictable order, low autonomy</small></span></div><div class="flow-arrow">—</div><div class="flow-node control"><span><strong>Hybrid orchestration</strong><br><small>code defines stages, model decides within them</small></span></div><div class="flow-arrow">—</div><div class="flow-node primary"><span><strong>Flexible agent</strong><br><small>model chooses actions and sequence</small></span></div></div><figcaption>The greater the autonomy, the greater the need for boundaries, observability, success criteria, and recovery.</figcaption></figure>
+
+        <div class="quiz" id="review"><h3>Check your understanding</h3><details><summary>Why is a system prompt not the entire harness?</summary><p>Instructions are only one input. A harness can also control tools, state, approvals, execution, errors, budgets, recovery, and verification.</p></details><details><summary>What turns model output into action?</summary><p>An external process interprets the request, validates policy, calls a tool in the environment, and returns the observation to the loop.</p></details><details><summary>Why separate session from context?</summary><p>A session can retain more history than the next inference can or should see, while active context may also contain ephemeral material that was never persisted.</p></details></div>
+        <nav class="pager" aria-label="Chapters"><a href="index.html"><small>Previous</small>Overview</a><a href="tools-context.html"><small>Next</small>Tools and context</a></nav>
+      </article>
+    </div>
+  </main><div data-site-footer></div>
+</body></html>

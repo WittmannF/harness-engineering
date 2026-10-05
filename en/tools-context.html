@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="How to design tools, MCP integration, and context policies for AI agents."><title>Tools and context — Harness Engineering</title><link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/styles.css?v=3"><link rel="alternate" hreflang="pt-BR" href="../ferramentas-contexto.html"><link rel="alternate" hreflang="en" href="tools-context.html"><script defer src="../assets/site.js?v=3"></script></head>
+<body data-page="ferramentas"><div data-site-header></div><main id="conteudo">
+  <header class="page-hero"><div class="page-hero-inner"><p class="eyebrow">Chapter 02 · interfaces and information</p><h1>Tools and context</h1><p class="lede">A capability only helps when it is exposed in a form the model can select, use, observe, and correct.</p><div class="page-meta"><span class="tag">18 min read</span><span class="tag">5 diagrams</span><span class="tag">interface design</span></div></div></header>
+  <div class="page-shell">
+    <aside class="toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#aci">Agent-computer interface</a></li><li><a href="#four">Four properties</a></li><li><a href="#costs">Tool costs</a></li><li><a href="#errors">Useful errors</a></li><li><a href="#mcp">The MCP boundary</a></li><li><a href="#context">Context and state</a></li><li><a href="#compaction">Compaction</a></li><li><a href="#review">Review</a></li></ul></aside>
+    <article class="article">
+      <p class="eyebrow">Interface is architecture</p><h2 id="aci">The model never uses “the computer” in the abstract</h2>
+      <p>It uses the interface the harness exposes. One coding agent may receive <code>read_file</code>, <code>search_code</code>, <code>apply_patch</code>, and <code>run_tests</code>. Another may receive only <code>shell(command)</code>. Both can reach the same repository, but they create very different problem surfaces.</p>
+      <p>SWE-agent called this layer the <strong>Agent-Computer Interface (ACI)</strong>: the agent’s interface to the computer is an experimental variable, not a neutral implementation detail <a href="references.html#ref-2">[2]</a>.</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node primary"><span><strong>Intent</strong><br><small>“fix the bug”</small></span></div><div class="flow-arrow">→</div><div class="flow-node control"><span><strong>ACI</strong><br><small>names, contracts, results</small></span></div><div class="flow-arrow">→</div><div class="flow-node"><span><strong>Real actions</strong><br><small>read, edit, test</small></span></div><div class="flow-arrow">→</div><div class="flow-node"><span><strong>Evidence</strong><br><small>diff, tests, state</small></span></div></div><figcaption>A good ACI reduces translation burden and makes the next correct step easier to identify.</figcaption></figure>
+
+      <h2 id="four">Four properties of an agent-facing tool</h2>
+      <div class="grid two"><div class="card"><span class="kicker">01 · Affordance</span><h3>What can it do?</h3><p>The actual capability: read, change, send, execute, retrieve, or verify.</p></div><div class="card"><span class="kicker">02 · Contract</span><h3>How is it requested?</h3><p>Name, description, arguments, types, constraints, and preconditions.</p></div><div class="card"><span class="kicker">03 · Observation</span><h3>What comes back?</h3><p>Data, identifiers, errors, side effects, and truncation information.</p></div><div class="card"><span class="kicker">04 · Feedback</span><h3>Does it help recovery?</h3><p>Does the result make the next correct action easier, or force the model to guess?</p></div></div>
+      <div class="callout"><strong>Available does not mean usable</strong>An operation may exist in the backend and still be effectively inaccessible to an agent if its name is ambiguous, its parameters are confusing, or its output hides what happened.</div>
+
+      <h2 id="costs">Tools consume attention too</h2>
+      <p>Names, descriptions, parameters, and schemas enter context before a tool is ever called. The result then returns to the model and competes with the rest of the task for context.</p>
+      <p class="formula">C<sub>tool</sub> = C<sub>selection</sub> + C<sub>observation</sub></p>
+      <table class="compare-table"><thead><tr><th>Problem</th><th>Symptom</th><th>Typical improvement</th></tr></thead><tbody><tr><td>Overlapping tools</td><td><code>search</code>, <code>find</code>, and <code>lookup</code> seem equivalent.</td><td>Fewer operations, clear boundaries, and namespacing.</td></tr><tr><td>Ambiguous arguments</td><td>The model chooses the right tool with invalid inputs.</td><td>Restricted types, short examples, actionable validation.</td></tr><tr><td>Noisy result</td><td>Hundreds of fields bury the needed information.</td><td>Filters, pagination, concise and detailed modes.</td></tr><tr><td>Silent truncation</td><td>The agent assumes it saw everything.</td><td>State the limit, total, and how to retrieve more.</td></tr></tbody></table>
+      <blockquote>Tool count is not a monotonic measure of capability. A new tool can expand reachable behavior while making selection harder.</blockquote>
+
+      <h3>A high-signal result</h3><p>It answers the next decision, preserves identifiers needed for later actions, and makes gaps explicit. A payload that is elegant for conventional software may be expensive and confusing for a model.</p>
+      <pre><code>{
+  "status": "found",
+  "customer_id": "cus_2481",
+  "name": "Ana Souza",
+  "plan": "Pro",
+  "open_items": 1,
+  "details_available": true
+}</code></pre>
+
+      <h2 id="errors">Errors are observations, not just exceptions</h2>
+      <p>“Error” does not teach an agent how to recover. A useful error distinguishes cause, side effects, and whether retry is safe.</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node risk"><span><strong>Failed</strong><br><small>branch not found</small></span></div><div class="flow-arrow">→</div><div class="flow-node"><span><strong>Classify</strong><br><small>no side effects</small></span></div><div class="flow-arrow">→</div><div class="flow-node control"><span><strong>Explain</strong><br><small>available branches</small></span></div><div class="flow-arrow">→</div><div class="flow-node primary"><span><strong>Recover</strong><br><small>choose a valid branch</small></span></div></div><figcaption>A recoverable failure should provide enough information for a better next action without pretending the failed operation succeeded.</figcaption></figure>
+      <pre><code>{
+  "status": "failed",
+  "reason": "branch_not_found",
+  "requested_branch": "release/2.4",
+  "available_branches": ["main", "release/2.3"],
+  "side_effects": "none",
+  "retryable": true
+}</code></pre>
+
+      <h2 id="mcp">MCP is an interoperability layer, not the whole architecture</h2>
+      <p>The Model Context Protocol standardizes how AI applications discover and call external capabilities. That is valuable, but it does not define the complete agent system.</p>
+      <figure class="diagram"><div class="layer-stack"><div class="layer"><strong>Product / task</strong><small>goal and user experience</small></div><div class="layer"><strong>Agent harness</strong><small>loop, context, policy, recovery, verification</small></div><div class="layer"><strong>MCP client</strong><small>interoperable discovery and calls</small></div><div class="layer"><strong>MCP servers</strong><small>tools · resources · prompts · optional extensions</small></div></div><figcaption>MCP connects capabilities. The harness still decides when to call them, what to approve, how to retry, and what proves success.</figcaption></figure>
+      <div class="grid two"><div class="card"><h3>MCP helps define</h3><ul><li>tool and resource discovery</li><li>request and response formats</li><li>capability negotiation</li><li>host/server integration</li></ul></div><div class="card"><h3>The harness still defines</h3><ul><li>loop scheduling</li><li>context selection</li><li>approval and retry</li><li>sandboxing and coordination</li><li>completion and evaluation</li></ul></div></div>
+
+      <h2 id="context">Active context and durable state are different surfaces</h2>
+      <p>The model sees a finite window on each call. The harness decides what enters it. Instructions, the current task, tools, recent history, documentation, results, plans, memory, and subagent reports compete for the same resource.</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node"><span><strong>Durable state</strong><br><small>events, files, plans, commits, snapshots</small></span></div><div class="flow-arrow">→</div><div class="flow-node control"><span><strong>Context policy</strong><br><small>retrieve · filter · summarize · order</small></span></div><div class="flow-arrow">→</div><div class="flow-node primary"><span><strong>Active context</strong><br><small>only what this invocation receives</small></span></div></div><figcaption>Persistence does not imply inclusion in every call. Inclusion in one call does not imply durable storage.</figcaption></figure>
+      <h3>Progressive disclosure</h3><ol class="steps"><li><strong>Orient:</strong> provide enough for the agent to understand the system and task.</li><li><strong>Make discoverable:</strong> point to deeper rules, documents, and data.</li><li><strong>Load on demand:</strong> bring in detail only when the current decision needs it.</li></ol>
+      <p>Skills are one example: reusable instructions and resources loaded when relevant. But topical relevance does not guarantee benefit. Skills can introduce functional errors, efficiency regressions, and provenance risk; they should be evaluated like any other harness component.</p>
+
+      <h2 id="compaction">Compaction saves context but loses information</h2>
+      <p>Replacing a long trajectory with a shorter summary reduces active-context cost, but does not preserve every detail. In general, <span class="formula" style="display:inline-block;margin:.2rem;padding:.3rem .6rem;border-radius:6px;border-left:0">C(H) ≠ H</span>.</p>
+      <figure class="diagram"><div class="flow"><div class="flow-node"><span><strong>Full history</strong><br><small>many events and details</small></span></div><div class="flow-arrow">→</div><div class="flow-node risk"><span><strong>Compaction</strong><br><small>lossy transformation</small></span></div><div class="flow-arrow">→</div><div class="flow-node primary"><span><strong>Active summary</strong><br><small>cheaper, but incomplete</small></span></div></div><figcaption>A safer design keeps durable history recoverable and treats the summary as a view, not a perfect replacement.</figcaption></figure>
+      <ul class="checklist"><li>Preserve decisions, IDs, constraints, and explicit commitments.</li><li>Record where omitted detail can be recovered.</li><li>Separate observed facts from inferences and plans.</li><li>Test tasks where older details become relevant again.</li></ul>
+
+      <div class="quiz" id="review"><h3>Check your understanding</h3><details><summary>Why can a generic shell be worse than specialized tools?</summary><p>It shifts command choice, quoting, output interpretation, and recovery onto the model. Flexibility can increase selection cost and error.</p></details><details><summary>Does MCP replace the agent loop?</summary><p>No. It standardizes capability interfaces. Context, scheduling, approval, execution, verification, and evaluation remain harness policies.</p></details><details><summary>Why should compaction not erase durable history?</summary><p>A summary is lossy; details that appear irrelevant today may become essential later.</p></details></div>
+      <nav class="pager" aria-label="Chapters"><a href="fundamentals.html"><small>Previous</small>Fundamentals</a><a href="security-control.html"><small>Next</small>Security and control</a></nav>
+    </article>
+  </div>
+</main><div data-site-footer></div></body></html>

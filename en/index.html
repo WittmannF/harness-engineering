@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A visual, practical guide to harness engineering for AI agents.">
+  <title>Harness Engineering — A visual guide</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css?v=3">
+  <link rel="alternate" hreflang="pt-BR" href="../index.html">
+  <link rel="alternate" hreflang="en" href="index.html">
+  <script defer src="../assets/site.js?v=3"></script>
+</head>
+<body data-page="inicio">
+  <div data-site-header></div>
+  <main id="conteudo">
+    <section class="hero">
+      <div class="hero-inner">
+        <div>
+          <p class="eyebrow">Visual guide · agent systems</p>
+          <h1>Harness Engineering</h1>
+          <p class="lede">The model is the engine. The harness is the system that chooses what it sees, lets it act, preserves state, controls risk, and verifies whether the work is actually complete.</p>
+          <div class="hero-actions">
+            <a class="button" href="fundamentals.html">Start with the fundamentals</a>
+            <a class="button secondary" href="production-guide.html">Open the production checklist</a>
+          </div>
+        </div>
+        <figure class="hero-system" aria-label="A compact view of an agent system">
+          <div class="system-stack">
+            <div class="system-node"><span class="node-index">01</span><span><strong>Task</strong><small>goal, constraints, and criteria</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node emphasis"><span class="node-index">02</span><span><strong>Harness</strong><small>context, loop, policy, and verification</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node"><span class="node-index">03</span><span><strong>Model</strong><small>interprets, chooses, and generates actions</small></span></div>
+            <div class="system-arrow">↓</div>
+            <div class="system-node"><span class="node-index">04</span><span><strong>Environment</strong><small>tools, files, APIs, and sandboxes</small></span></div>
+            <div class="system-arrow">↺ evidence returns to the loop</div>
+          </div>
+          <figcaption>An agent emerges from the controlled interaction of learned capability, orchestration, and the external world.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="chapter-grid" aria-labelledby="map">
+      <p class="eyebrow">Learning map</p>
+      <h2 id="map">From the first loop to production operations</h2>
+      <p class="lede">The handbook has been reorganized into six progressive tracks. Each page combines concepts, diagrams, examples, and review questions.</p>
+      <div class="chapter-cards">
+        <a class="chapter-card" href="fundamentals.html"><span class="chapter-number">01 · FOUNDATION</span><h3>Fundamentals</h3><p>Model, agent, harness, session, tool, sandbox, and the minimal loop that connects them.</p><span class="card-link">Open chapter</span></a>
+        <a class="chapter-card" href="tools-context.html"><span class="chapter-number">02 · INTERFACES</span><h3>Tools and context</h3><p>ACI, contracts, feedback, MCP, active context, durable state, and compaction.</p><span class="card-link">Open chapter</span></a>
+        <a class="chapter-card" href="security-control.html"><span class="chapter-number">03 · BOUNDARIES</span><h3>Security and control</h3><p>Sandboxes, permissions, approvals, credentials, provenance, and stopping conditions.</p><span class="card-link">Open chapter</span></a>
+        <a class="chapter-card" href="durable-operations.html"><span class="chapter-number">04 · DURABILITY</span><h3>Durable operations</h3><p>Recovery, idempotency, concurrency, subagents, and structured working state.</p><span class="card-link">Open chapter</span></a>
+        <a class="chapter-card" href="evaluation.html"><span class="chapter-number">05 · EVIDENCE</span><h3>Verification and evaluation</h3><p>External feedback, observability, graders, benchmarks, and harness ablations.</p><span class="card-link">Open chapter</span></a>
+        <a class="chapter-card" href="production-guide.html"><span class="chapter-number">06 · SYNTHESIS</span><h3>Production guide</h3><p>A complete mental model, common failures, and fifteen questions for reviewing a real system.</p><span class="card-link">Open chapter</span></a>
+      </div>
+    </section>
+
+    <section class="chapter-grid" style="padding-top:0" aria-labelledby="thesis">
+      <div class="grid two">
+        <div><p class="eyebrow">The central thesis</p><h2 id="thesis">A strong model does not eliminate systems engineering</h2><p>A model call only produces an output conditioned on context. It does not open a browser, apply a patch, confirm a transaction, or know on its own that a task is complete. The harness turns inference into controlled work.</p></div>
+        <div class="card"><p class="formula">agent system ≈ model + harness + environment</p><p>This is not a formal identity. It is a mental model for separating three sources of behavior: learned capability, control logic, and external state.</p></div>
+      </div>
+      <figure class="diagram" aria-labelledby="responsibilities">
+        <div class="swimlanes">
+          <div class="swimlane"><div class="lane-label">MODEL</div><div class="lane-content"><span class="pill">understand</span><span class="pill">plan</span><span class="pill">select action</span><span class="pill">generate response</span></div></div>
+          <div class="swimlane"><div class="lane-label">HARNESS</div><div class="lane-content"><span class="pill">assemble context</span><span class="pill">expose tools</span><span class="pill">apply policy</span><span class="pill">persist state</span><span class="pill">recover</span><span class="pill">verify</span></div></div>
+          <div class="swimlane"><div class="lane-label">ENVIRONMENT</div><div class="lane-content"><span class="pill">files</span><span class="pill">shell</span><span class="pill">browser</span><span class="pill">APIs</span><span class="pill">database</span></div></div>
+        </div>
+        <figcaption id="responsibilities">The separation is conceptual: implementations may colocate components, but they still fail differently and carry different trust assumptions.</figcaption>
+      </figure>
+    </section>
+  </main>
+  <div data-site-footer></div>
+</body>
+</html>
